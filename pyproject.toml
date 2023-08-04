@@ -1,0 +1,134 @@
+[project]
+  authors = [
+    { name = "Sasan Jacob Rasti", email = "sasan_jacob.rasti@tu-dresden.de" },
+
+    { name = "Felix Flatter", email = "felix.flatter@rptu.de" },
+  ]
+  dependencies = [
+    "attrs",
+    "click",
+    "geopandas",
+    "loguru",
+    "matplotlib",
+    "numpy",
+    "open-mastr",
+    "openpyxl",
+    "pandas",
+    "pvlib",
+    "pyarrow",
+    "pyproj",
+    "pytz",
+    "pyyaml",
+    "rasterio",
+    "requests",
+    "scipy",
+    "seaborn",
+    "shapely",
+    "tqdm",
+    "windpowerlib",
+  ]
+  description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
+  license = { file = "LICENSE" }
+  name = "tech-models"
+  requires-python = ">=3.11"
+  version = "0.1.0"
+
+  [project.urls]
+    homepage = "https://github.com/ieeh-tu-dresden/power-system-technology-models"
+
+  [project.scripts]
+    convert-clc-europe-file   = "tools.convert_clc_europe_file:convert"
+    convert-dwd-try-files     = "tools.convert_dwd_try_files:convert"
+    convert-time-zones-file   = "tools.convert_time_zones_file:convert"
+    convert-zip-codes-file    = "tools.convert_zip_codes_file:convert"
+    create-dwd-try-index-file = "tools.create_dwd_try_index_file:create"
+
+[build-system]
+  build-backend = "pdm.pep517.api"
+  requires      = ["pdm-pep517"]
+
+[tool]
+
+  [tool.pdm]
+
+    [tool.pdm.dev-dependencies]
+      deployment = ["commitizen"]
+      formatting = ["black"]
+      linter     = ["ruff"]
+      prototype  = ["ipykernel"]
+      test       = ["pytest", "pytest-cov", "pytest-xdist"]
+      typing     = ["mypy"]
+
+[tool.ruff]
+  extend-exclude = ["tests"]
+  ignore = [
+    "ANN002",
+    "ANN003",
+    "ANN101",
+    "ANN102",
+    "C901",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D202",
+    "D203",
+    "D401",
+    "E402",
+    "E501",
+  ]
+  line-length = 120
+  select = ["ALL"]
+
+  [tool.ruff.flake8-type-checking]
+
+  [tool.ruff.isort]
+    force-single-line = true
+
+  [tool.ruff.pydocstyle]
+    convention = "pep257"
+
+  [tool.ruff.pep8-naming]
+    classmethod-decorators = ["classmethod"]
+
+[tool.black]
+  line_length = 120
+
+[tool.commitizen]
+  name          = "cz_conventional_commits"
+  tag_format    = "$version"
+  version       = "0.1.0"
+  version_files = ["pyproject.toml:version"]
+
+[tool.mypy]
+  follow_imports         = "normal"
+  ignore_missing_imports = true
+  mypy_path              = "pstm"
+  namespace_packages     = true
+  strict_optional        = true
+  warn_no_return         = true
+  warn_redundant_casts   = true
+  warn_unused_ignores    = true
+
+[tool.pytest.ini_options]
+  addopts      = "-ra --strict-markers -p pytester --cov=pstm --cov-report xml --cov-report term"
+  python_files = "test_*.py"
+  testpaths    = ["tests"]
+
+[tool.coverage.run]
+  branch = true
+  omit   = ["__pypackages__/*", "build/*", "tests/*"]
+  source = ["pstm"]
+
+[tool.coverage.report]
+  show_missing = true
+
+[tool.coverage.xml]
+  output = "coverage.xml"
+
+[tool.pyright]
+  exclude = ["**/__pycache__"]

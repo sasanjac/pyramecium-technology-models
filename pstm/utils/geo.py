@@ -1,0 +1,253 @@
+# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
+# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
+# :license: BSD 3-Clause
+
+from __future__ import annotations
+
+import pathlib
+import random
+from typing import TYPE_CHECKING
+
+import attrs
+import geopandas as gpd
+import numpy as np
+import pyproj
+import rasterio as rio
+import requests
+import shapely.geometry as shg
+from loguru import logger
+from scipy.spatial import distance
+
+from pstm.utils.roughness_lengths import ROUGHNESS_LENGTHS
+from pstm.utils.roughness_lengths import ValidCLCs
+
+if TYPE_CHECKING:
+    import datetime
+    from types import TracebackType
+    from typing import Literal
+    from typing import TypeVar
+
+    T = TypeVar("T")
+
+
+DEFAULT_DWD_TRY_FILES_PATH = pathlib.Path("data/weather/weather")
+WEATHER_GEN_FILES_PATH = pathlib.Path("data/weather/weather")
+DEFAULT_DWD_TRY_YEAR = 2045
+DEFAULT_DWD_TRY_SCENARIO: Literal["mittel", "sommerwarm", "winterkalt"] = "mittel"
+DEFAULT_CLC_FILE_PATH = pathlib.Path("data/geo/clc_europe_epsg3035.feather")
+DEFAULT_ZIP_CODES_FILE_PATH = pathlib.Path("data/geo/zip_codes_germany_epsg4326.feather")
+DEFAULT_ELEVATION_FILE_PATH = pathlib.Path("data/geo/elevation_germany_20m_epsg25832.tif")
+DEFAULT_DWD_TRY_ZONES_FILE_PATH = pathlib.Path("data/geo/dwd_try_zones_epsg4326.feather")
+DEFAULT_TIME_ZONES_FILE_PATH = pathlib.Path("data/geo/time_zones_epsg4326.feather")
+ELEVATION_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},{{}}"
+
+
+def get_elevation_from_api(lat: float, lon: float) -> float:
+    result = requests.get(ELEVATION_SERVICE_URL.format(lat, lon), timeout=5)
+    return result.json()["results"][0]["elevation"]
+
+
+@attrs.define(auto_attribs=True, kw_only=True, slots=False)
+class GeoRef:
+    zip_codes_file_path: pathlib.Path = DEFAULT_ZIP_CODES_FILE_PATH
+    elevation_file_path: pathlib.Path = DEFAULT_ELEVATION_FILE_PATH
+    clc_file_path: pathlib.Path = DEFAULT_CLC_FILE_PATH
+    dwd_try_zones_file_path: pathlib.Path = DEFAULT_DWD_TRY_ZONES_FILE_PATH
+    dwd_try_year: int = DEFAULT_DWD_TRY_YEAR
+    dwd_try_scenario: Literal["mittel", "sommerwarm", "winterkalt"] = DEFAULT_DWD_TRY_SCENARIO
+    dwd_try_files_path: pathlib.Path = DEFAULT_DWD_TRY_FILES_PATH
+    weather_gen_files_path: pathlib.Path = WEATHER_GEN_FILES_PATH
+    time_zones_file_path: pathlib.Path = DEFAULT_TIME_ZONES_FILE_PATH
+    reference_epsg: int = 4326
+    use_raw_dwd_try_files: bool = False
+    voronoi_file_path: pathlib.Path | None = None
+
+    def get_zip_code(self, lat: float, lon: float) -> int:
+        return self.get_value_for_coord(self._zip_codes, lat=lat, lon=lon)
+
+    def get_zip_code_center(self, zip_code: str) -> tuple[float, float]:
+        matching_zip_codes = self._zip_codes.zip_code == str(zip_code)
+        polygon = self._zip_codes[matching_zip_codes].geometry.to_numpy()[0]
+        point = polygon.centroid
+        return (point.y, point.x)
+
+    def get_dwd_try_zone(self, lat: float, lon: float) -> str:
+        zone: int = self.get_value_for_coord(self._dwd_try_zones, lat=lat, lon=lon)
+        return f"TRY{zone:02d}"
+
+    def get_weather_gen_index(self, lat: float, lon: float) -> int:
+        return self.get_value_for_coord(self._weather_gen_index, lat=lat, lon=lon)
+
+    def get_voronoi(self, lat: float, lon: float) -> int:
+        return self.get_value_for_coord(self._voronoi, lat=lat, lon=lon)
+
+    def get_voronois(self, lat: float, lon: float) -> list[int]:
+        lat, lon = self._transformer_3035.transform(xx=lat, yy=lon)
+        coord = shg.Point(lon, lat)
+        return self._voronoi.distance(coord).sort_values().index.tolist()
+
+    def get_value_for_coord(self, shape: gpd.GeoDataFrame[T], lat: float, lon: float) -> T:  # type: ignore[type-var]
+        lat_, lon_ = self._transformer_3035.transform(xx=lat, yy=lon)
+        coord = shg.Point(lon_, lat_)
+        data = shape[shape.geometry.contains(coord)].value
+        if len(data) == 0:
+            logger.warning("Coordinate {lat}, {lon} not found in shape. Using closest distance.", lat=lat, lon=lon)
+            return shape.iloc[shape.distance(coord).argmin()].value
+
+        if len(data) != 1:
+            logger.warning(
+                "Coordinate {lat}, {lon} returned more than one element. Using first element.",
+                lat=lat,
+                lon=lon,
+            )
+
+        return data.to_numpy()[0]
+
+    def get_weather_gen_file(self, lat: float, lon: float) -> pathlib.Path:
+        if self.use_raw_dwd_try_files:
+            msg = "`use_raw_dwd_try_files` is set to `true`. Either set to `false` or use `get_dwd_try_file`."
+            raise RuntimeError(msg)
+
+        index = self.get_weather_gen_index(lat=lat, lon=lon)
+        return (
+            self.weather_gen_files_path
+            / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_{index:06d}_epsg3034.feather"
+        )
+
+    def get_dwd_try_file(self, lat: float, lon: float) -> pathlib.Path:
+        if not self.use_raw_dwd_try_files:
+            msg = "`use_raw_dwd_try_files` is set to `false`. Either set to `true` or use `get_weather_gen_file`."
+            raise RuntimeError(msg)
+
+        lat, lon = self._transformer_3034.transform(xx=lon, yy=lat)
+        closest_index = distance.cdist([(lat, lon)], self._dwd_try_nodes).argmin()
+        return self._dwd_try_files[closest_index]
+
+    def get_elevation(self, lat: float, lon: float) -> float:
+        lat, lon = self._transformer_25832.transform(xx=lat, yy=lon)
+        return next(iter(self._elevation.sample(((lat, lon),))))[0]
+
+    def get_roughness_length(self, lat: float, lon: float) -> float:
+        clc = self.get_clc(lat=lat, lon=lon)
+        min_length = ROUGHNESS_LENGTHS[clc]["rmin"]
+        max_length = ROUGHNESS_LENGTHS[clc]["rmax"]
+        return random.uniform(min_length, max_length)
+
+    def get_clc(self, lat: float, lon: float) -> ValidCLCs:
+        return self.get_value_for_coord(self._clc, lat=lat, lon=lon)
+
+    def get_time_zone(self, lat: float, lon: float) -> datetime.tzinfo:
+        return self.get_value_for_coord(self._time_zones, lat=lat, lon=lon)
+
+    def __enter__(self) -> GeoRef:
+        self._init_zip_codes_file()
+        self._init_elevation_file()
+        self._init_dwd_try_zones_file()
+        if self.use_raw_dwd_try_files:
+            self._init_dwd_try_files()
+        else:
+            self._init_weather_gen_index_file()
+
+        # self._init_clc_file_path() # noqa: ERA001
+        self._init_time_zones_file()
+        self._init_voronoi_file()
+        self._init_transformers()
+
+        return self
+
+    def _init_zip_codes_file(self) -> None:
+        logger.info("Loading zip codes file...")
+        self._zip_codes: gpd.GeoDataFrame[int] = gpd.read_feather(self.zip_codes_file_path).to_crs(epsg=3035)
+        logger.info("Loading zip codes file. Done.")
+
+    def _init_elevation_file(self) -> None:
+        logger.info("Loading elevation file...")
+        crs = rio.CRS.from_epsg(25832)
+        self._elevation: gpd.GeoDataFrame[float] = rio.open(self.elevation_file_path, crs=crs)
+        logger.info("Loading elevation file. Done.")
+
+    def _init_dwd_try_zones_file(self) -> None:
+        logger.info("Loading DWD TRY zones file...")
+        self._dwd_try_zones: gpd.GeoDataFrame[int] = gpd.read_feather(self.dwd_try_zones_file_path).to_crs(epsg=3035)
+        logger.info("Loading DWD TRY zones file. Done.")
+
+    def _init_dwd_try_files(self) -> None:
+        self._dwd_try_files = [
+            f
+            for d in self.dwd_try_files_path.iterdir()
+            if d.is_dir()
+            for f in d.iterdir()
+            if (
+                f.is_file()
+                and f.suffix == ".dat"
+                and self.dwd_try_scenario in f.name
+                and str(self.dwd_try_year) in f.name
+            )
+        ]
+        dwd_try_coords = [f.name.split("_")[1] for f in self._dwd_try_files]
+        dwd_try_right = np.array([coord[: len(coord) // 2] for coord in dwd_try_coords], dtype=np.float64)
+        dwd_try_height = np.array([coord[len(coord) // 2 :] for coord in dwd_try_coords], dtype=np.float64)
+        self._dwd_try_nodes = np.array(list(zip(dwd_try_height, dwd_try_right, strict=True)))
+
+    def _init_weather_gen_index_file(self) -> None:
+        logger.info("Loading DWD TRY index file...")
+        index_file_path = (
+            self.weather_gen_files_path / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_index_epsg3034.feather"
+        )
+        self._weather_gen_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
+        logger.info("Loading DWD TRY index file. Done.")
+
+    def _init_weather_gen_files(self) -> None:
+        logger.info("Loading weather generators files...")
+        files = [
+            f
+            for d in self.weather_gen_files_path.iterdir()
+            if d.is_dir()
+            for f in d.iterdir()
+            if (
+                f.is_file()
+                and f.suffix == ".feather"
+                and self.dwd_try_scenario in f.name
+                and str(self.dwd_try_year) in f.name
+                and "index" not in f.name
+            )
+        ]
+        self._weather_gen_files: dict[int, pathlib.Path] = {int(f.stem.split("_")[-1]): f for f in files}
+        logger.info("Loading weather generators files. Done.")
+
+    def _init_clc_file_path(self) -> None:
+        logger.info("Loading CLC file...")
+        self._clc: gpd.GeoDataFrame[ValidCLCs] = gpd.read_feather(self.clc_file_path).to_crs(epsg=3035)
+        logger.info("Loading CLC file. Done.")
+
+    def _init_time_zones_file(self) -> None:
+        logger.info("Loading time zones file...")
+        self._time_zones: gpd.GeoDataFrame[str] = gpd.read_feather(self.time_zones_file_path).to_crs(epsg=3035)
+        logger.info("Loading time zones file. Done.")
+
+    def _init_voronoi_file(self) -> None:
+        if self.voronoi_file_path is not None:
+            logger.info("Loading voronoi file...")
+            self._voronoi: gpd.GeoDataFrame[str] = gpd.read_feather(self.voronoi_file_path).to_crs(epsg=3035)
+            logger.info("Loading voronoi file. Done.")
+        else:
+            logger.info("Skipping voronoi file...")
+
+    def _init_transformers(self) -> None:
+        logger.info("Creating transformers...")
+        self._transformer_3034 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:3034")
+        self._transformer_3035 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:3035")
+        self._transformer_4326 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:4326")
+        self._transformer_25832 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:25832")
+        logger.info("Creating transformers. Done.")
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException],
+        exc_val: BaseException,
+        exc_tb: TracebackType,
+    ) -> None:
+        self._close_elevation_file()
+
+    def _close_elevation_file(self) -> None:
+        self._elevation.close()
