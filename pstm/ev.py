@@ -184,7 +184,7 @@ class EVSystem(Tech):
 
     def run(self) -> None:
         index = dates.date_range(self.tz, "15T")
-        type_day_start = int(self.dates.weekday[0])  # type: ignore[arg-type]
+        type_day_start = int(self.dates.weekday[0])
         tds: list[TypeDay] = ["WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(365)]
         acp = pd.Series(np.concatenate([self.power(td) for td in tds]), index=index, name="p_el")
         self.acp.high = acp.resample(self.dates.freq).mean()
