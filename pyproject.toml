@@ -57,7 +57,7 @@
       linter     = ["ruff"]
       prototype  = ["ipykernel"]
       test       = ["pytest", "pytest-cov", "pytest-xdist"]
-      typing     = ["mypy"]
+      typing     = ["mypy", "types-PyYAML", "types-pytz", "types-requests"]
 
 [tool.ruff]
   extend-exclude = ["tests"]
