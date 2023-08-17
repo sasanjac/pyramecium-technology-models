@@ -16,11 +16,13 @@ class Tech:
     @acp.default
     def _acp_default(self) -> pd.DataFrame:
         return pd.DataFrame(
-            {
-                "high": 0,
-                "base": 0,
-                "low": 0,
-            },
+            data=[0, 0, 0],
+            columns=pd.MultiIndex.from_arrays(
+                [
+                    ["high", "base", "low"],
+                    [1, 1, 1],
+                ],
+            ),
             index=self.dates,
         )
 
@@ -29,11 +31,13 @@ class Tech:
     @acq.default
     def _acq_default(self) -> pd.DataFrame:
         return pd.DataFrame(
-            {
-                "high": 0,
-                "base": 0,
-                "low": 0,
-            },
+            data=[0, 0, 0],
+            columns=pd.MultiIndex.from_arrays(
+                [
+                    ["high", "base", "low"],
+                    [1, 1, 1],
+                ],
+            ),
             index=self.dates,
         )
 
