@@ -21,7 +21,6 @@ from pstm.utils import exceptions
 from pstm.utils.geo import GeoRef
 
 if t.TYPE_CHECKING:
-
     import numpy.typing as npt
 
     JSONTypes = None | bool | str | float | list["JSONTypes"] | dict[str, "JSONTypes"]
