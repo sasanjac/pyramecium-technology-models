@@ -4,13 +4,10 @@
 
 from __future__ import annotations
 
-import typing as t
+import datetime as dt
 
 import pandas as pd
 
-if t.TYPE_CHECKING:
-    import datetime
 
-
-def date_range(tz: datetime.tzinfo, freq: str = "1h", year: int = 2050) -> pd.DatetimeIndex:
+def date_range(tz: dt.tzinfo, freq: dt.timedelta = dt.timedelta(hours=1), year: int = 2050) -> pd.DatetimeIndex:
     return pd.date_range(start=str(year), end=str(year + 1), freq=freq, tz=tz, inclusive="left")

@@ -6,6 +6,7 @@
   ]
   dependencies = [
     "attrs",
+    "cattrs",
     "click",
     "geopandas",
     "loguru",
@@ -13,7 +14,7 @@
     "numpy",
     "open-mastr",
     "openpyxl",
-    "pandas",
+    "pandas[excel]",
     "pvlib",
     "pyarrow",
     "pyproj",
@@ -80,11 +81,13 @@
     "D401",
     "E402",
     "E501",
+    "S311",
   ]
   line-length = 120
   select = ["ALL"]
 
   [tool.ruff.flake8-type-checking]
+    runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
 
   [tool.ruff.isort]
     force-single-line = true
@@ -94,6 +97,17 @@
 
   [tool.ruff.pep8-naming]
     classmethod-decorators = ["classmethod"]
+
+  [tool.ruff.pylint]
+    max-args = 10
+
+  [tool.ruff.flake8-import-conventions.extend-aliases]
+    "datetime"         = "dt"
+    "geopandas"        = "gpd"
+    "numpy.typing"     = "npt"
+    "rasterio"         = "rio"
+    "shapely.geometry" = "shg"
+    "typing"           = "t"
 
 [tool.black]
   line_length = 120

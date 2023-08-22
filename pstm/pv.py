@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import TYPE_CHECKING
 
 import attrs
@@ -13,8 +14,6 @@ import pvlib
 from pstm.base import Tech
 
 if TYPE_CHECKING:
-    import datetime
-
     import pandas as pd
 
 GAMMA_TEMP = -0.004
@@ -38,7 +37,7 @@ class PV(Tech):
     lat: float
     lon: float
     alt: float
-    tz: datetime.tzinfo
+    tz: dt.tzinfo
     surface_tilt: int = attrs.field(default=30)
     surface_azimuth: int = attrs.field(default=180)
     gamma_temp: float = attrs.field(default=GAMMA_TEMP)
@@ -79,7 +78,7 @@ class PV(Tech):
         self.acq.high = -self.acq.low
 
     @classmethod
-    def from_efficiency_and_area(  # noqa: PLR0913
+    def from_efficiency_and_area(
         cls,
         dates: pd.DatetimeIndex,
         efficiency: float,
@@ -88,7 +87,7 @@ class PV(Tech):
         lat: float,
         lon: float,
         alt: float,
-        tz: datetime.tzinfo,
+        tz: dt.tzinfo,
     ) -> PV:
         power_inst = E0 * efficiency * area
         return cls(

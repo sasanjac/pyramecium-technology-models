@@ -198,7 +198,7 @@ class Generator:
 
         logger.info("Writing parameters to file. Done.")
 
-    def generate_custom_vl(  # noqa: PLR0913
+    def generate_custom_vl(
         self,
         dataframe: pd.DataFrame,
         georef: GeoRef,
@@ -219,7 +219,7 @@ class Generator:
 
         logger.info("Generating {voltage_level} profiles. Done.", voltage_level=voltage_level)
 
-    def generate_for_row(  # noqa: PLR0913
+    def generate_for_row(
         self,
         row: pd.Series,
         node: str,
@@ -287,7 +287,7 @@ class Generator:
 
         lat = weather.lat
         lon = weather.lon
-        alt = georef.get_elevation(lat=lat, lon=lon)
+        alt = georef.get_altitude(lat=lat, lon=lon)
         pv = PV(
             power_inst=power_inst * 1e6,
             efficiency_inv=1,
@@ -301,7 +301,7 @@ class Generator:
         pv.run(pv_weather)
         return self.create_df(power=-pv.acp.base * 1e-6)
 
-    def generate_thermal_devs(  # noqa: PLR0913
+    def generate_thermal_devs(
         self,
         p_wp: float,
         georef: GeoRef,
@@ -335,7 +335,7 @@ class Generator:
         }
         return (cop, dem, params)
 
-    def create_thermal_demand(  # noqa: PLR0913
+    def create_thermal_demand(
         self,
         hh_params: HHParams,
         georef: GeoRef,
@@ -443,7 +443,7 @@ class Generator:
         unit.run(wind_weather)
         return self.create_df(power=-unit.acp.low * 1e-6)
 
-    def generate_wind(  # noqa: PLR0913
+    def generate_wind(
         self,
         lat: float,
         lon: float,

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import pathlib
 from typing import Literal
 
@@ -52,7 +53,7 @@ def convert(
     n_files = len(dwd_files)
     output_path.mkdir(exist_ok=True, parents=True)
     tz = pytz.timezone("Europe/Berlin")
-    date_index = dates.date_range(tz, "1h", year=year)
+    date_index = dates.date_range(tz, freq=dt.timedelta(hours=1), year=year)
     file_name_template = f"dwd_try_{year}_{scenario}_{{:06d}}_epsg3034.feather"
     with GeoRef(weather_gen_files_path=output_path, dwd_try_scenario=scenario, reference_epsg=3034) as georef:
         for i, file_path in enumerate(dwd_files):

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import attrs
+import numpy as np
 import pandas as pd
 
 
@@ -16,7 +17,7 @@ class Tech:
     @acp.default
     def _acp_default(self) -> pd.DataFrame:
         return pd.DataFrame(
-            data=[0, 0, 0],
+            data=np.zeros((len(self.dates), 3)),
             columns=pd.MultiIndex.from_arrays(
                 [
                     ["high", "base", "low"],
@@ -31,7 +32,7 @@ class Tech:
     @acq.default
     def _acq_default(self) -> pd.DataFrame:
         return pd.DataFrame(
-            data=[0, 0, 0],
+            data=np.zeros((len(self.dates), 3)),
             columns=pd.MultiIndex.from_arrays(
                 [
                     ["high", "base", "low"],

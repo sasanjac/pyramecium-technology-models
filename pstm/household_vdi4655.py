@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import pathlib
 import random
@@ -20,7 +21,6 @@ from pstm.utils import exceptions
 from pstm.utils.geo import GeoRef
 
 if t.TYPE_CHECKING:
-    import datetime
 
     import numpy.typing as npt
 
@@ -137,7 +137,7 @@ class Household(Tech):
     area: float
     lat: float | None = None
     lon: float | None = None
-    tz: datetime.tzinfo | None = None
+    tz: dt.tzinfo | None = None
     climate_zone: str | None = None
     freq: str = "1h"
 
@@ -163,7 +163,7 @@ class Household(Tech):
         self.type_days = TYPE_DAYS_MAPPING[self.climate_zone]
 
     def run(self, *, thermal: bool = True, electrical: bool = True, random_shift: bool = False) -> None:
-        index = dates.date_range(self._tz, "15T")
+        index = dates.date_range(self._tz, freq=dt.timedelta(minutes=15))
         if thermal is True:
             water_thermal_demand = self._calculate_water_thermal_demand()
             heating_thermal_demand = self._calculate_heating_thermal_demand()

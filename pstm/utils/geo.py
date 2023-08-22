@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import pathlib
 import random
-from typing import TYPE_CHECKING
+import typing as t
+from typing import Literal
 
 import attrs
 import geopandas as gpd
@@ -21,10 +22,9 @@ from scipy.spatial import distance
 from pstm.utils.roughness_lengths import ROUGHNESS_LENGTHS
 from pstm.utils.roughness_lengths import ValidCLCs
 
-if TYPE_CHECKING:
-    import datetime
+if t.TYPE_CHECKING:
+    import datetime as dt
     from types import TracebackType
-    from typing import Literal
     from typing import TypeVar
 
     T = TypeVar("T")
@@ -36,21 +36,21 @@ DEFAULT_DWD_TRY_YEAR = 2045
 DEFAULT_DWD_TRY_SCENARIO: Literal["mittel", "sommerwarm", "winterkalt"] = "mittel"
 DEFAULT_CLC_FILE_PATH = pathlib.Path("data/geo/clc_europe_epsg3035.feather")
 DEFAULT_ZIP_CODES_FILE_PATH = pathlib.Path("data/geo/zip_codes_germany_epsg4326.feather")
-DEFAULT_ELEVATION_FILE_PATH = pathlib.Path("data/geo/elevation_germany_20m_epsg25832.tif")
+DEFAULT_ALTITUDE_FILE_PATH = pathlib.Path("data/geo/altitude_germany_20m_epsg25832.tif")
 DEFAULT_DWD_TRY_ZONES_FILE_PATH = pathlib.Path("data/geo/dwd_try_zones_epsg4326.feather")
 DEFAULT_TIME_ZONES_FILE_PATH = pathlib.Path("data/geo/time_zones_epsg4326.feather")
-ELEVATION_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},{{}}"
+ALTITUDE_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},{{}}"
 
 
-def get_elevation_from_api(lat: float, lon: float) -> float:
-    result = requests.get(ELEVATION_SERVICE_URL.format(lat, lon), timeout=5)
-    return result.json()["results"][0]["elevation"]
+def get_altitude_from_api(lat: float, lon: float) -> float:
+    result = requests.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=5)
+    return result.json()["results"][0]["altitude"]
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class GeoRef:
     zip_codes_file_path: pathlib.Path = DEFAULT_ZIP_CODES_FILE_PATH
-    elevation_file_path: pathlib.Path = DEFAULT_ELEVATION_FILE_PATH
+    altitude_file_path: pathlib.Path = DEFAULT_ALTITUDE_FILE_PATH
     clc_file_path: pathlib.Path = DEFAULT_CLC_FILE_PATH
     dwd_try_zones_file_path: pathlib.Path = DEFAULT_DWD_TRY_ZONES_FILE_PATH
     dwd_try_year: int = DEFAULT_DWD_TRY_YEAR
@@ -123,9 +123,9 @@ class GeoRef:
         closest_index = distance.cdist([(lat, lon)], self._dwd_try_nodes).argmin()
         return self._dwd_try_files[closest_index]
 
-    def get_elevation(self, lat: float, lon: float) -> float:
+    def get_altitude(self, lat: float, lon: float) -> float:
         lat, lon = self._transformer_25832.transform(xx=lat, yy=lon)
-        return next(iter(self._elevation.sample(((lat, lon),))))[0]
+        return next(iter(self._altitude.sample(((lat, lon),))))[0]
 
     def get_roughness_length(self, lat: float, lon: float) -> float:
         clc = self.get_clc(lat=lat, lon=lon)
@@ -136,12 +136,12 @@ class GeoRef:
     def get_clc(self, lat: float, lon: float) -> ValidCLCs:
         return self.get_value_for_coord(self._clc, lat=lat, lon=lon)
 
-    def get_time_zone(self, lat: float, lon: float) -> datetime.tzinfo:
+    def get_time_zone(self, lat: float, lon: float) -> dt.tzinfo:
         return self.get_value_for_coord(self._time_zones, lat=lat, lon=lon)
 
-    def __enter__(self) -> GeoRef:
+    def __enter__(self) -> t.Self:
         self._init_zip_codes_file()
-        self._init_elevation_file()
+        self._init_altitude_file()
         self._init_dwd_try_zones_file()
         if self.use_raw_dwd_try_files:
             self._init_dwd_try_files()
@@ -160,11 +160,11 @@ class GeoRef:
         self._zip_codes: gpd.GeoDataFrame[int] = gpd.read_feather(self.zip_codes_file_path).to_crs(epsg=3035)
         logger.info("Loading zip codes file. Done.")
 
-    def _init_elevation_file(self) -> None:
-        logger.info("Loading elevation file...")
+    def _init_altitude_file(self) -> None:
+        logger.info("Loading altitude file...")
         crs = rio.CRS.from_epsg(25832)
-        self._elevation: gpd.GeoDataFrame[float] = rio.open(self.elevation_file_path, crs=crs)
-        logger.info("Loading elevation file. Done.")
+        self._altitude: gpd.GeoDataFrame[float] = rio.open(self.altitude_file_path, crs=crs)
+        logger.info("Loading altitude file. Done.")
 
     def _init_dwd_try_zones_file(self) -> None:
         logger.info("Loading DWD TRY zones file...")
@@ -194,7 +194,10 @@ class GeoRef:
         index_file_path = (
             self.weather_gen_files_path / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_index_epsg3034.feather"
         )
-        self._weather_gen_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
+        try:
+            self._weather_gen_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
+        except FileNotFoundError:
+            logger.warning("Could not find DWD TRY index file. Some methods may not work properly.")
         logger.info("Loading DWD TRY index file. Done.")
 
     def _init_weather_gen_files(self) -> None:
@@ -243,11 +246,11 @@ class GeoRef:
 
     def __exit__(
         self,
-        exc_type: type[BaseException],
-        exc_val: BaseException,
-        exc_tb: TracebackType,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
-        self._close_elevation_file()
+        self._close_altitude_file()
 
-    def _close_elevation_file(self) -> None:
-        self._elevation.close()
+    def _close_altitude_file(self) -> None:
+        self._altitude.close()

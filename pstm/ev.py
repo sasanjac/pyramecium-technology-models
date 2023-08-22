@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import typing as t
 
 import attrs
@@ -14,8 +15,6 @@ from pstm.base import Tech
 from pstm.utils import dates
 
 if t.TYPE_CHECKING:
-    import datetime
-
     TypeDay = t.Literal["WD", "WE"]
     DrivingCategory = t.Literal["low", "medium", "high"]
     Profile = t.Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -145,7 +144,7 @@ class EVSystem(Tech):
     driver: Driver
     car: Car
     charge_point: ChargePoint
-    tz: datetime.tzinfo
+    tz: dt.tzinfo
 
     def charged_internally(self) -> bool:
         return GEN.choice(a=[False, True], p=[0.15, 0.85])
@@ -183,7 +182,7 @@ class EVSystem(Tech):
         return rv
 
     def run(self) -> None:
-        index = dates.date_range(self.tz, "15T")
+        index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15))
         type_day_start = int(self.dates.weekday[0])
         tds: list[TypeDay] = ["WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(365)]
         acp = pd.Series(np.concatenate([self.power(td) for td in tds]), index=index, name="p_el")

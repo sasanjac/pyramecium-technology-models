@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from dataclasses import dataclass
 from dataclasses import field
@@ -15,7 +16,6 @@ import pyproj
 from pstm.utils import dates
 
 if TYPE_CHECKING:
-    import datetime
     import pathlib
 
     from pstm.utils.geo import GeoRef
@@ -31,8 +31,8 @@ class WeatherGenerator:
     speed_wind: pd.Series  # in m/s
     pressure: pd.Series  # in Pa
     roughness_length: float
-    tz: datetime.tzinfo
-    freq: str = field(default="1h", repr=False)
+    tz: dt.tzinfo
+    freq: dt.timedelta = field(default=dt.timedelta(hours=1), repr=False)
     year: int = 2050
 
     def __post_init__(self) -> None:
@@ -88,15 +88,15 @@ class WeatherGenerator:
             json.dump(metadata, fp=file_handle)
 
     @classmethod
-    def from_dwd(  # noqa: PLR0913
+    def from_dwd(
         cls,
         dwd_file_path: pathlib.Path,
         georef: GeoRef,
         lat: float,
         lon: float,
-        tz: datetime.tzinfo | None = None,
+        tz: dt.tzinfo | None = None,
         index: pd.DatetimeIndex | None = None,
-        freq: str = "1h",
+        freq: dt.timedelta = dt.timedelta(hours=1),
         year: int = 2050,
     ) -> WeatherGenerator:
         weather = pd.read_csv(dwd_file_path, skiprows=34, sep=r"\s+")
@@ -105,10 +105,10 @@ class WeatherGenerator:
             tz = georef.get_time_zone(lat=lat, lon=lon)
 
         if index is None:
-            index = dates.date_range(tz, "1h", year=year)
+            index = dates.date_range(tz, freq=dt.timedelta(hours=1), year=year)
 
         weather.index = index
-        if freq != "1h":
+        if freq != dt.timedelta(hours=1):
             new_index = dates.date_range(tz, freq, year=year)
             weather = weather.resample(freq).mean()
             weather = weather.reindex(new_index, method="ffill")
