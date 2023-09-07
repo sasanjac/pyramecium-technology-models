@@ -28,13 +28,14 @@ class HeatPump(Tech, abc.ABC):
 
     def run(self, temp: pd.Series, thermal_demand: pd.Series | None = None) -> None:
         temp_diff = self.target_temp - temp
+        temp_diff.index = self.dates
         cop = self.calc_cop(temp_diff)
         if thermal_demand is None:
             self._th.low = (-cop * self.power_inst).to_numpy()
-            self.acp.high = (pd.Series(self.power_inst * np.ones(len(temp)), index=temp.index)).to_numpy()
+            self.acp.high = (pd.Series(self.power_inst * np.ones(len(temp)), index=self.dates)).to_numpy()
         else:
             self._th.low = (-thermal_demand).to_numpy()
-            self.acp.high = (pd.Series(np.divide(thermal_demand, cop), index=temp.index)).to_numpy()
+            self.acp.high = (pd.Series(np.divide(thermal_demand, cop), index=self.dates)).to_numpy()
 
         self.acq.high = (self.acp.high * np.tan(np.arccos(self.cosphi))).to_numpy()
 

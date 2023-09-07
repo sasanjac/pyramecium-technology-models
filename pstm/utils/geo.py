@@ -31,8 +31,10 @@ if t.TYPE_CHECKING:
 
 
 DEFAULT_DWD_TRY_FILES_PATH = pathlib.Path("data/weather/weather")
-WEATHER_GEN_FILES_PATH = pathlib.Path("data/weather/weather")
+DEFAULT_WEATHER_GEN_FILES_PATH = pathlib.Path("data/weather/weather")
+DEFAULT_NEWA_FILES_PATH = pathlib.Path("data/weather/weather")
 DEFAULT_DWD_TRY_YEAR = 2045
+DEFAULT_NEWA_YEAR = 2018
 DEFAULT_DWD_TRY_SCENARIO: Literal["mittel", "sommerwarm", "winterkalt"] = "mittel"
 DEFAULT_CLC_FILE_PATH = pathlib.Path("data/geo/clc_europe_epsg3035.feather")
 DEFAULT_ZIP_CODES_FILE_PATH = pathlib.Path("data/geo/zip_codes_germany_epsg4326.feather")
@@ -56,7 +58,9 @@ class GeoRef:
     dwd_try_year: int = DEFAULT_DWD_TRY_YEAR
     dwd_try_scenario: Literal["mittel", "sommerwarm", "winterkalt"] = DEFAULT_DWD_TRY_SCENARIO
     dwd_try_files_path: pathlib.Path = DEFAULT_DWD_TRY_FILES_PATH
-    weather_gen_files_path: pathlib.Path = WEATHER_GEN_FILES_PATH
+    weather_gen_files_path: pathlib.Path = DEFAULT_WEATHER_GEN_FILES_PATH
+    newa_files_path: pathlib.Path = DEFAULT_NEWA_FILES_PATH
+    newa_year: int = DEFAULT_NEWA_YEAR
     time_zones_file_path: pathlib.Path = DEFAULT_TIME_ZONES_FILE_PATH
     reference_epsg: int = 4326
     use_raw_dwd_try_files: bool = False
@@ -77,6 +81,9 @@ class GeoRef:
 
     def get_weather_gen_index(self, lat: float, lon: float) -> int:
         return self.get_value_for_coord(self._weather_gen_index, lat=lat, lon=lon)
+
+    def get_newa_index(self, lat: float, lon: float) -> int:
+        return self.get_value_for_coord(self._newa_index, lat=lat, lon=lon)
 
     def get_voronoi(self, lat: float, lon: float) -> int:
         return self.get_value_for_coord(self._voronoi, lat=lat, lon=lon)
@@ -113,6 +120,10 @@ class GeoRef:
             self.weather_gen_files_path
             / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_{index:06d}_epsg3034.feather"
         )
+
+    def get_newa_file(self, lat: float, lon: float) -> pathlib.Path:
+        index = self.get_newa_index(lat=lat, lon=lon)
+        return self.newa_files_path / f"newa_{self.newa_year}_{index:06d}_epsg3034.feather"
 
     def get_dwd_try_file(self, lat: float, lon: float) -> pathlib.Path:
         if not self.use_raw_dwd_try_files:
@@ -217,6 +228,24 @@ class GeoRef:
         ]
         self._weather_gen_files: dict[int, pathlib.Path] = {int(f.stem.split("_")[-1]): f for f in files}
         logger.info("Loading weather generators files. Done.")
+
+    def _init_newa_index_file(self) -> None:
+        logger.info("Loading NEWA index file...")
+        index_file_path = self.newa_files_path / f"newa_{self.newa_year}_index_epsg3034.feather"
+        self._newa_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
+        logger.info("Loading NEWA index file. Done.")
+
+    def _init_newa_files(self) -> None:
+        logger.info("Loading NEWA files...")
+        files = [
+            f
+            for d in self.newa_files_path.iterdir()
+            if d.is_dir()
+            for f in d.iterdir()
+            if (f.is_file() and f.suffix == ".feather" and str(self.newa_year) in f.name and "index" not in f.name)
+        ]
+        self._newa_files: dict[int, pathlib.Path] = {int(f.stem.split("_")[-1]): f for f in files}
+        logger.info("Loading NEWA files. Done.")
 
     def _init_clc_file_path(self) -> None:
         logger.info("Loading CLC file...")

@@ -154,7 +154,7 @@ class Household(Tech):
         if self.tz is None:
             if self.lat is not None and self.lon is not None:
                 with GeoRef() as georef:
-                    self._tz = georef.get_time_zone(lat=self.lat, lon=self.lon)
+                    self.tz = georef.get_time_zone(lat=self.lat, lon=self.lon)
             else:
                 zone = "time"
                 raise MissingArgumentsError(zone)
@@ -162,7 +162,7 @@ class Household(Tech):
         self.type_days = TYPE_DAYS_MAPPING[self.climate_zone]
 
     def run(self, *, thermal: bool = True, electrical: bool = True, random_shift: bool = False) -> None:
-        index = dates.date_range(self._tz, freq=dt.timedelta(minutes=15))
+        index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year)
         if thermal is True:
             water_thermal_demand = self._calculate_water_thermal_demand()
             heating_thermal_demand = self._calculate_heating_thermal_demand()
