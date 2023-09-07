@@ -19,12 +19,20 @@ class BaselineProfiles(Appliances):
     power_variation: float = attrs.field(validator=validate_level)
     power_variation_max: float
 
-    def _run(self, *, n_units: int, n_steps: int, **_) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    def _run(
+        self,
+        *,
+        n_units: int,
+        n_steps: int,
+        generator: np.random.Generator,
+        **_,
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p_const = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         p_const = np.ones((n_steps, n_units)) * np.tile(_p_const, (n_steps, 1))
         steps = np.linspace(1, n_steps, n_steps, dtype=np.int64)
@@ -40,4 +48,5 @@ class BaselineProfiles(Appliances):
             parameter_1=self.reactive_power_parameter_1,
             parameter_2=self.reactive_power_parameter_2,
             active_power=p,
+            generator=generator,
         )

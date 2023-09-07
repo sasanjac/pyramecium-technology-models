@@ -19,6 +19,8 @@ from pstm.dickert.appliances import DistributionType
 from pstm.dickert.appliances import validate_level_sequence
 from pstm.utils import dates
 
+NaT = dt.time(0)
+
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class LightingProfiles(Appliances):
@@ -36,15 +38,15 @@ class LightingProfiles(Appliances):
     ]
     time_on_parameters_1: tuple[
         dt.time,
-        dt.time | t.Literal[0],
         dt.time,
-        dt.time | t.Literal[0],
+        dt.time,
+        dt.time,
     ]
     time_on_parameters_2: tuple[
         dt.time,
-        dt.time | t.Literal[0],
         dt.time,
-        dt.time | t.Literal[0],
+        dt.time,
+        dt.time,
     ]
     time_off_distribution_types: tuple[
         DistributionType,
@@ -53,15 +55,15 @@ class LightingProfiles(Appliances):
         DistributionType,
     ]
     time_off_parameters_1: tuple[
-        dt.time | t.Literal[0],
         dt.time,
-        dt.time | t.Literal[0],
+        dt.time,
+        dt.time,
         dt.time,
     ]
     time_off_parameters_2: tuple[
-        dt.time | t.Literal[0],
         dt.time,
-        dt.time | t.Literal[0],
+        dt.time,
+        dt.time,
         dt.time,
     ]
     time_on_variations: tuple[float, float, float, float] = attrs.field(
@@ -78,6 +80,7 @@ class LightingProfiles(Appliances):
         altitude: float,
         year: int,
         tz: dt.tzinfo,
+        generator: np.random.Generator,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         location = pvlib.location.Location(
             latitude=lat,
@@ -94,6 +97,7 @@ class LightingProfiles(Appliances):
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         _p_wd_morning = self._calc_wd_morning(
             n_units=n_units,
@@ -102,6 +106,7 @@ class LightingProfiles(Appliances):
             day_index_start=0,
             day_index_end=5,
             sunrise=sunrise,
+            generator=generator,
         )
         _p_wd_evening = self._calc_wd_evening(
             n_units=n_units,
@@ -110,6 +115,7 @@ class LightingProfiles(Appliances):
             day_index_start=0,
             day_index_end=5,
             sunset=sunset,
+            generator=generator,
         )
         _p_we_morning = self._calc_we_morning(
             n_units=n_units,
@@ -118,6 +124,7 @@ class LightingProfiles(Appliances):
             day_index_start=5,
             day_index_end=7,
             sunrise=sunrise,
+            generator=generator,
         )
         _p_we_evening = self._calc_we_evening(
             n_units=n_units,
@@ -126,6 +133,7 @@ class LightingProfiles(Appliances):
             day_index_start=5,
             day_index_end=7,
             sunset=sunset,
+            generator=generator,
         )
         _p = _p_wd_morning + _p_wd_evening + _p_we_morning + _p_we_evening
         _p[_p > 1] = 1
@@ -137,6 +145,7 @@ class LightingProfiles(Appliances):
             parameter_1=self.reactive_power_parameter_1,
             parameter_2=self.reactive_power_parameter_2,
             active_power=p,
+            generator=generator,
         )
 
     def _calc_wd_evening(
@@ -148,6 +157,7 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunset: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.float64]:
         return self._calc_evening(
             n_units=n_units,
@@ -157,6 +167,7 @@ class LightingProfiles(Appliances):
             day_index_start=day_index_start,
             day_index_end=day_index_end,
             sunset=sunset,
+            generator=generator,
             add_tail=True,
         )
 
@@ -169,6 +180,7 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunset: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.float64]:
         return self._calc_evening(
             n_units=n_units,
@@ -178,6 +190,7 @@ class LightingProfiles(Appliances):
             day_index_start=day_index_start,
             day_index_end=day_index_end,
             sunset=sunset,
+            generator=generator,
         )
 
     def _calc_evening(
@@ -190,11 +203,12 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunset: npt.NDArray[np.int64],
+        generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.float64]:
         top_1 = self.time_on_parameters_1[parameter_index]
         top_2 = self.time_on_parameters_2[parameter_index]
-        if top_1 != 0 and top_2 != 0:
+        if top_1 != NaT and top_2 != NaT:
             time_on_user = self._calc_time_on_user(
                 n_units=n_units,
                 n_steps=n_steps,
@@ -205,6 +219,7 @@ class LightingProfiles(Appliances):
                 day_index_start=day_index_start,
                 day_index_end=day_index_end,
                 add_tail=add_tail,
+                generator=generator,
             )
         else:
             time_on_user = None
@@ -219,6 +234,7 @@ class LightingProfiles(Appliances):
             day_index_start=day_index_start,
             day_index_end=day_index_end,
             add_tail=add_tail,
+            generator=generator,
         )
 
         time_on = self._calc_time_on_sunset(
@@ -229,6 +245,7 @@ class LightingProfiles(Appliances):
             day_index_end=day_index_end,
             sunset=sunset,
             add_tail=add_tail,
+            generator=generator,
         )
 
         if time_on_user is not None:
@@ -240,6 +257,7 @@ class LightingProfiles(Appliances):
             n_days=n_days,
             time_on=time_on,
             time_off=time_off,
+            generator=generator,
         )
 
     def _calc_wd_morning(
@@ -251,6 +269,7 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunrise: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.float64]:
         return self._calc_morning(
             n_units=n_units,
@@ -260,6 +279,7 @@ class LightingProfiles(Appliances):
             day_index_start=day_index_start,
             day_index_end=day_index_end,
             sunrise=sunrise,
+            generator=generator,
             add_tail=True,
         )
 
@@ -272,6 +292,7 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunrise: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.float64]:
         return self._calc_morning(
             n_units=n_units,
@@ -281,6 +302,7 @@ class LightingProfiles(Appliances):
             day_index_start=day_index_start,
             day_index_end=day_index_end,
             sunrise=sunrise,
+            generator=generator,
         )
 
     def _calc_morning(
@@ -293,6 +315,7 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunrise: npt.NDArray[np.int64],
+        generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.float64]:
         time_on = self._calc_time_on_user(
@@ -305,10 +328,11 @@ class LightingProfiles(Appliances):
             day_index_start=day_index_start,
             day_index_end=day_index_end,
             add_tail=add_tail,
+            generator=generator,
         )
         top_1 = self.time_off_parameters_1[parameter_index]
         top_2 = self.time_off_parameters_2[parameter_index]
-        if top_1 != 0 and top_2 != 0:
+        if top_1 != NaT and top_2 != NaT:
             time_off_user = self._calc_time_off_user(
                 n_units=n_units,
                 n_steps=n_steps,
@@ -319,6 +343,7 @@ class LightingProfiles(Appliances):
                 day_index_start=day_index_start,
                 day_index_end=day_index_end,
                 add_tail=add_tail,
+                generator=generator,
             )
         else:
             time_off_user = None
@@ -331,6 +356,7 @@ class LightingProfiles(Appliances):
             day_index_end=day_index_end,
             sunrise=sunrise,
             add_tail=add_tail,
+            generator=generator,
         )
 
         if time_off_user is not None:
@@ -342,6 +368,7 @@ class LightingProfiles(Appliances):
             n_days=n_days,
             time_on=time_on,
             time_off=time_off,
+            generator=generator,
         )
 
     def _calc_power_from_times(
@@ -352,6 +379,7 @@ class LightingProfiles(Appliances):
         n_days: int,
         time_on: npt.NDArray[np.int64],
         time_off: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.float64]:
         for i in range(n_units):
             idx = time_on[:, i] >= time_off[:, i]
@@ -365,6 +393,7 @@ class LightingProfiles(Appliances):
             n_steps=n_days,
             n_units=n_units,
             clear=False,
+            generator=generator,
         )
         prob_2 = self.time_on_variations[0]
         idx = prob_2 > prob_1
@@ -389,6 +418,7 @@ class LightingProfiles(Appliances):
         time_on_parameters_2: dt.time,
         day_index_start: int,
         day_index_end: int,
+        generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
@@ -416,6 +446,7 @@ class LightingProfiles(Appliances):
             n_steps=n_days,
             n_units=n_units,
             clear=False,
+            generator=generator,
         )
         time_on_weekday_mid = idx + prob
         time_on_weekday_mid[time_on_weekday_mid < 1] = 1
@@ -432,6 +463,7 @@ class LightingProfiles(Appliances):
         time_off_parameters_2: dt.time,
         day_index_start: int,
         day_index_end: int,
+        generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
@@ -459,6 +491,7 @@ class LightingProfiles(Appliances):
             n_steps=n_days,
             n_units=n_units,
             clear=False,
+            generator=generator,
         )
         return idx + prob
 
@@ -471,6 +504,7 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunrise: npt.NDArray[np.int64],
+        generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
@@ -495,6 +529,7 @@ class LightingProfiles(Appliances):
             n_steps=n_days,
             n_units=n_units,
             clear=False,
+            generator=generator,
         )
         return idx * samples_per_day + sunrise[idx] + prob
 
@@ -507,6 +542,7 @@ class LightingProfiles(Appliances):
         day_index_start: int,
         day_index_end: int,
         sunset: npt.NDArray[np.int64],
+        generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
@@ -531,5 +567,6 @@ class LightingProfiles(Appliances):
             n_steps=n_days,
             n_units=n_units,
             clear=False,
+            generator=generator,
         )
         return idx * samples_per_day + sunset[idx] + prob

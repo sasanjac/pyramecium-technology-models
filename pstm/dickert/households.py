@@ -34,18 +34,27 @@ from pstm.base import Tech
 from pstm.utils import dates
 from pstm.utils import geo
 
+cattrs.register_structure_hook(dt.datetime, lambda v, _: dt.datetime.fromisoformat(v))
+cattrs.register_structure_hook(dt.date, lambda v, _: dt.date.fromisoformat(v))
+cattrs.register_structure_hook(dt.time, lambda v, _: dt.time.fromisoformat(v))
+
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class Households:
-    appliances: Sequence[Appliances]
+    baselines_profiles: Sequence[BaselineProfiles]
+    cycle_profiles: Sequence[CycleProfiles]
+    on_off_profiles: Sequence[OnOffProfiles]
+    process_profiles: Sequence[ProcessProfiles]
+    lighting_profiles: Sequence[LightingProfiles]
     phase_distribution: tuple[float, float, float]
 
-    def run(self, n_units: int, n_steps: int, lat: float, lon: float, altitude: float, year: int) -> None:
+    def run(self, n_units: int, n_steps: int, lat: float, lon: float, altitude: float, year: int, seed: int) -> None:
         with geo.GeoRef() as georef:
             self.tz = georef.get_time_zone(lat=lat, lon=lon)
 
         self.n_steps = n_steps
         self.year = year
+        generator = np.random.default_rng(seed=seed)
 
         for app in self.appliances:
             app.run(
@@ -57,10 +66,21 @@ class Households:
                 altitude=altitude,
                 year=year,
                 tz=self.tz,
+                generator=generator,
             )
 
         self.p = np.sum([app.p for app in self.appliances], axis=0)
         self.q = np.sum([app.q for app in self.appliances], axis=0)
+
+    @property
+    def appliances(self) -> Sequence[Appliances]:
+        return (
+            self.baselines_profiles  # type: ignore[operator]
+            + self.cycle_profiles
+            + self.on_off_profiles
+            + self.process_profiles
+            + self.lighting_profiles
+        )
 
     @classmethod
     def from_config(cls, config: dict[str, list[dict[str, t.Any]]]) -> Households:
@@ -70,7 +90,11 @@ class Households:
         process_profiles = [ProcessProfiles(**e) for e in config["process_profiles"] if e["equipment_level"] > 0]
         lighting_profiles = [LightingProfiles(**e) for e in config["lighting_profiles"] if e["equipment_level"] > 0]
         return Households(
-            appliances=baselines_profiles + cycle_profiles + on_off_profiles + process_profiles + lighting_profiles,  # type: ignore[operator]
+            baselines_profiles=baselines_profiles,
+            cycle_profiles=cycle_profiles,
+            on_off_profiles=on_off_profiles,
+            process_profiles=process_profiles,
+            lighting_profiles=lighting_profiles,
             phase_distribution=config["phase_distribution"],  # type: ignore[arg-type]
         )
 

@@ -41,6 +41,7 @@ class CycleProfiles(OperationProfiles):
         *,
         n_units: int,
         n_steps: int,
+        generator: np.random.Generator,
         **_,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_distribution(
@@ -48,15 +49,18 @@ class CycleProfiles(OperationProfiles):
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         period_length = self._calc_period_length(
             n_units=n_units,
             n_steps=n_steps,
+            generator=generator,
         )
         operation_length = self._calc_operation_length(
             n_units=n_units,
             n_steps=n_steps,
             period_length=period_length,
+            generator=generator,
         )
         shift = self._sim_distribution(
             distribution_type="unif",
@@ -64,6 +68,7 @@ class CycleProfiles(OperationProfiles):
             parameter_2=np.max(period_length[0, :]),
             n_steps=1,
             n_units=n_units,
+            generator=generator,
         )
         time_on = np.cumsum(period_length, axis=0) + shift
         time_off = time_on + operation_length
@@ -88,6 +93,7 @@ class CycleProfiles(OperationProfiles):
             parameter_1=self.reactive_power_parameter_1,
             parameter_2=self.reactive_power_parameter_2,
             active_power=p,
+            generator=generator,
         )
 
     def _calc_period_length(
@@ -95,6 +101,7 @@ class CycleProfiles(OperationProfiles):
         *,
         n_units: int,
         n_steps: int,
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
         scatter_init = self._sim_distribution(
@@ -102,6 +109,7 @@ class CycleProfiles(OperationProfiles):
             parameter_1=self.period_parameter_1 / step_length,
             parameter_2=self.period_parameter_2 / step_length,
             n_units=n_units,
+            generator=generator,
         )
         period_length = np.tile(scatter_init, (np.ceil(n_steps * 1.01 / np.min(scatter_init)).astype(np.int64), 1))
         scatter_individual = self._sim_distribution(
@@ -110,6 +118,7 @@ class CycleProfiles(OperationProfiles):
             parameter_2=self.period_parameter_3 / step_length,
             n_units=n_units,
             n_steps=period_length.shape[0],
+            generator=generator,
         )
         period_length = period_length + scatter_individual
 
@@ -134,6 +143,7 @@ class CycleProfiles(OperationProfiles):
         n_units: int,
         n_steps: int,
         period_length: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
         scatter_init = self._sim_distribution(
@@ -141,6 +151,7 @@ class CycleProfiles(OperationProfiles):
             parameter_1=self.operation_parameter_1 / step_length,
             parameter_2=self.operation_parameter_2 / step_length,
             n_units=n_units,
+            generator=generator,
         )
         operation_length = np.tile(scatter_init, (period_length.shape[0], 1))
         scatter_individual = self._sim_distribution(
@@ -149,6 +160,7 @@ class CycleProfiles(OperationProfiles):
             parameter_2=self.operation_parameter_3 / step_length,
             n_units=n_units,
             n_steps=operation_length.shape[0],
+            generator=generator,
         )
         operation_length = operation_length + scatter_individual
 

@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import typing as t
 
 import attrs
 import numpy as np
@@ -22,6 +21,8 @@ from pstm.dickert.cycle_profiles import OperationProfiles
 MAX_PARAMETER_SUM = 3
 MAX_ITERATIONS = 2**16
 
+NaT = dt.time(0)
+
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class OnOffProfiles(OperationProfiles):
@@ -30,7 +31,7 @@ class OnOffProfiles(OperationProfiles):
     usage_parameter_2: float
     usage_parameter_3: float
     usage_variation: float = attrs.field(validator=validate_level)
-    time_on_distribution_type: tuple[
+    time_on_distribution_types: tuple[
         DistributionType,
         DistributionType,
         DistributionType,
@@ -39,20 +40,20 @@ class OnOffProfiles(OperationProfiles):
         DistributionType,
     ]
     time_on_parameters_1: tuple[
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
+        dt.time,
+        dt.time,
+        dt.time,
+        dt.time,
+        dt.time,
+        dt.time,
     ]
     time_on_parameters_2: tuple[
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
-        dt.time | t.Literal[0],
+        dt.time,
+        dt.time,
+        dt.time,
+        dt.time,
+        dt.time,
+        dt.time,
     ]
     time_on_parameters_3: tuple[float, float, float, float, float, float] = attrs.field(
         validator=validate_level_sequence,
@@ -65,17 +66,19 @@ class OnOffProfiles(OperationProfiles):
 
     @use_probability.default
     def _use_probability_default(self) -> bool:
-        return np.all(
-            [
-                num == 0
-                for num in [
-                    self.probability_1,
-                    self.probability_2,
-                    self.probability_3,
-                    self.probability_4,
-                ]
-            ],
-            axis=0,
+        return bool(
+            np.all(
+                [
+                    num == 0
+                    for num in [
+                        self.probability_1,
+                        self.probability_2,
+                        self.probability_3,
+                        self.probability_4,
+                    ]
+                ],
+                axis=0,
+            ),
         )
 
     def _run(
@@ -83,6 +86,7 @@ class OnOffProfiles(OperationProfiles):
         *,
         n_units: int,
         n_steps: int,
+        generator: np.random.Generator,
         **_,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_p_distribution(
@@ -90,17 +94,20 @@ class OnOffProfiles(OperationProfiles):
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         usage_frequency = self._sim_distribution(
             distribution_type=self.usage_distribution_type,
             parameter_1=self.usage_parameter_1,
             parameter_2=self.usage_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         time_on = self._calc_time_on_total(
             n_steps=n_steps,
             n_units=n_units,
             usage_frequency=usage_frequency,
+            generator=generator,
         )
         operation_length = self._calc_operation_length(
             n_units=n_units,
@@ -110,6 +117,7 @@ class OnOffProfiles(OperationProfiles):
             parameter_2=self.operation_parameter_2,
             variation=self.operation_variation,
             time_on=time_on,
+            generator=generator,
         )
         time_off = (time_on + operation_length) * np.ceil(
             time_on * operation_length / (n_steps * np.max(operation_length)),
@@ -137,6 +145,7 @@ class OnOffProfiles(OperationProfiles):
             parameter_1=self.reactive_power_parameter_1,
             parameter_2=self.reactive_power_parameter_2,
             active_power=p,
+            generator=generator,
         )
 
     def _calc_operation_length(
@@ -149,6 +158,7 @@ class OnOffProfiles(OperationProfiles):
         parameter_2: float,
         variation: float,
         time_on: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
         operation_length = self._sim_distribution(
@@ -159,6 +169,7 @@ class OnOffProfiles(OperationProfiles):
             n_units=time_on.shape[1],
             factor=1 / step_length,
             clear=False,
+            generator=generator,
         )
 
         steps = np.linspace(1, n_steps, n_steps, dtype=np.int64)
@@ -179,6 +190,7 @@ class OnOffProfiles(OperationProfiles):
         n_steps: int,
         n_units: int,
         usage_frequency: npt.NDArray[np.int64],
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
         time_on_weekdays = self._calc_time_on(
             n_steps=n_steps,
@@ -190,6 +202,7 @@ class OnOffProfiles(OperationProfiles):
             day_index_start=0,
             day_index_end=5,
             add_tail=True,
+            generator=generator,
         )
         time_on_weekenddays = self._calc_time_on(
             n_steps=n_steps,
@@ -200,6 +213,7 @@ class OnOffProfiles(OperationProfiles):
             parameter_index_end=6,
             day_index_start=5,
             day_index_end=7,
+            generator=generator,
         )
         time_on = np.sort(np.concatenate([time_on_weekdays, time_on_weekenddays], axis=0), axis=0)
         idx = (time_on[:-1, :] == time_on[1:, :]) & (time_on[1:, :] > 0)
@@ -223,6 +237,7 @@ class OnOffProfiles(OperationProfiles):
         day_index_start: int,
         day_index_end: int,
         add_tail: bool = False,
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
         step_length = Constants.MINUTES_PER_YEAR // n_steps
         if np.sum(self.time_on_parameters_1[:parameter_index_end] == 0) < MAX_PARAMETER_SUM:
@@ -230,7 +245,7 @@ class OnOffProfiles(OperationProfiles):
             for i in range(parameter_index_start, parameter_index_end):
                 top_1 = self.time_on_parameters_1[i]
                 top_2 = self.time_on_parameters_2[i]
-                if top_1 != 0 and top_2 != 0:
+                if top_1 != NaT and top_2 != NaT:
                     samples_per_day = Constants.MINUTES_PER_DAY // step_length
                     steps = self._calc_steps(
                         day_index_start=day_index_start,
@@ -243,7 +258,7 @@ class OnOffProfiles(OperationProfiles):
                         + np.sort(steps),
                     ).astype(np.int64)
                     prob = self._sim_distribution(
-                        distribution_type=self.time_on_distribution_type[i],
+                        distribution_type=self.time_on_distribution_types[i],
                         parameter_1=0,
                         parameter_2=self._time_as_float(top_2)
                         * Constants.MINUTES_PER_HOUR
@@ -252,6 +267,7 @@ class OnOffProfiles(OperationProfiles):
                         n_steps=idx.shape[0],
                         n_units=1,
                         clear=False,
+                        generator=generator,
                     )
                     time_on[:, n_units * i : n_units * (i + 1)] = np.tile(
                         idx[:, np.newaxis] + prob,
@@ -281,6 +297,7 @@ class OnOffProfiles(OperationProfiles):
                 parameter_2=0.5,
                 n_steps=n_days,
                 n_units=3 * n_units,
+                generator=generator,
             )
             idx = prob1_y > prob2
             time_on = time_on * idx
@@ -304,6 +321,7 @@ class OnOffProfiles(OperationProfiles):
         n_steps: int = 1,
         factor: float = 1,
         clear: bool = True,
+        generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
         if distribution_type == "unif" and self.use_probability:
             p = np.zeros((n_steps, n_units), dtype=np.int64)
@@ -313,6 +331,7 @@ class OnOffProfiles(OperationProfiles):
                 parameter_2=0.5,
                 n_units=n_units,
                 clear=False,
+                generator=generator,
             )
             n = np.cumsum(
                 [
@@ -337,4 +356,5 @@ class OnOffProfiles(OperationProfiles):
             n_steps=n_steps,
             factor=factor,
             clear=clear,
+            generator=generator,
         )

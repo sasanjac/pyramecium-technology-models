@@ -32,6 +32,7 @@ class ProcessProfiles(OnOffProfiles):
         *,
         n_units: int,
         n_steps: int,
+        generator: np.random.Generator,
         **_,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_distribution(
@@ -39,23 +40,27 @@ class ProcessProfiles(OnOffProfiles):
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         _p_2 = self._sim_distribution(
             distribution_type=self.active_power_2_distribution_type,
             parameter_1=self.active_power_2_parameter_1,
             parameter_2=self.active_power_2_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         usage_frequency = self._sim_distribution(
             distribution_type=self.usage_distribution_type,
             parameter_1=self.usage_parameter_1,
             parameter_2=self.usage_parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         time_on = self._calc_time_on_total(
             n_steps=n_steps,
             n_units=n_units,
             usage_frequency=usage_frequency,
+            generator=generator,
         )
         operation_length_1 = self._calc_operation_length(
             n_units=n_units,
@@ -65,6 +70,7 @@ class ProcessProfiles(OnOffProfiles):
             parameter_2=self.operation_parameter_2,
             variation=self.operation_variation,
             time_on=time_on,
+            generator=generator,
         )
         operation_length_2 = self._calc_operation_length(
             n_units=n_units,
@@ -74,6 +80,7 @@ class ProcessProfiles(OnOffProfiles):
             parameter_2=self.operation_2_parameter_2,
             variation=0,
             time_on=time_on,
+            generator=generator,
         )
         time_off_1 = (time_on + operation_length_1) * np.ceil(
             time_on * operation_length_1 / (n_steps * np.max(operation_length_1)),
@@ -114,6 +121,7 @@ class ProcessProfiles(OnOffProfiles):
             parameter_1=self.reactive_power_parameter_1,
             parameter_2=self.reactive_power_parameter_2,
             active_power=p_1,
+            generator=generator,
         )
         if p_2.size == 0:
             p = p_1
@@ -127,6 +135,7 @@ class ProcessProfiles(OnOffProfiles):
                 parameter_1=self.reactive_power_2_parameter_1,
                 parameter_2=self.reactive_power_2_parameter_2,
                 active_power=p_2,
+                generator=generator,
             )
             q = q_1 + q_2
 
@@ -137,5 +146,6 @@ class ProcessProfiles(OnOffProfiles):
             parameter_1=self.reactive_power_parameter_1,
             parameter_2=self.reactive_power_parameter_2,
             active_power=p,
+            generator=generator,
         )
         return (p, q)

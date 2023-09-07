@@ -20,7 +20,7 @@ if t.TYPE_CHECKING:
 
 
 DistributionType = t.Literal["normal", "unif", "lognormal"]
-Phase = t.Literal[1, 2, 3]
+Phase = t.Literal[0, 1, 2, 3]
 
 
 def validate_pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG001
@@ -59,11 +59,6 @@ class Constants:
     WEEKENDDAYS_PER_YEAR = 104
 
 
-SEED = 999999999
-
-GEN = np.random.default_rng(seed=SEED)
-
-
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class Appliances:
     description: str
@@ -87,6 +82,7 @@ class Appliances:
         distribution_type: DistributionType,
         parameter_1: float,
         parameter_2: float,
+        generator: np.random.Generator,
         n_units: int,
         n_steps: int = 1,
         factor: float = 1,
@@ -94,20 +90,20 @@ class Appliances:
     ) -> npt.NDArray[np.int64]:
         match distribution_type:
             case "normal":
-                p = GEN.normal(
+                p = generator.normal(
                     loc=parameter_1,
                     scale=parameter_2,
                     size=(n_steps, n_units),
                 )
             case "unif":
-                p = GEN.uniform(
+                p = generator.uniform(
                     low=parameter_1 - parameter_2,
                     high=parameter_1 + parameter_2,
                     size=(n_steps, n_units),
                 )
             case "lognormal":
                 p = (
-                    GEN.lognormal(
+                    generator.lognormal(
                         mean=parameter_1,
                         sigma=parameter_2,
                         size=(n_steps, n_units),
@@ -150,6 +146,7 @@ class Appliances:
         *,
         n_units: int,
         n_steps: int,
+        generator: np.random.Generator,
         phase_distribution: tuple[float, float, float],
         lat: float,
         lon: float,
@@ -165,12 +162,13 @@ class Appliances:
             altitude=altitude,
             year=year,
             tz=tz,
+            generator=generator,
         )
         if np.any(p < 0):
             logger.warning("Active power is negative")
 
         if self.phase == 0:
-            self.phase = GEN.choice((1, 2, 3), p=phase_distribution)
+            self.phase = generator.choice((1, 2, 3), p=phase_distribution)
 
         self.p = np.zeros((n_steps, n_units, 3))
         self.p[:, :, self.phase - 1] = p
@@ -183,6 +181,7 @@ class Appliances:
         *,
         n_units: int,
         n_steps: int,
+        generator: np.random.Generator,
         lat: float,
         lon: float,
         altitude: float,
@@ -213,8 +212,9 @@ class Appliances:
         parameter_1: float,
         parameter_2: float,
         active_power: npt.NDArray[np.float64],
+        generator: np.random.Generator,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-        rnd_index = GEN.uniform(0, 1, n_units)
+        rnd_index = generator.uniform(0, 1, n_units)
         active_power[:, rnd_index > self.equipment_level] = 0
 
         fac = self._sim_distribution(
@@ -222,9 +222,10 @@ class Appliances:
             parameter_1=parameter_1,
             parameter_2=parameter_2,
             n_units=n_units,
+            generator=generator,
         )
         reactive_power = active_power * np.tile(fac, (n_steps, 1))
-        rnd_index = GEN.uniform(0, 1, n_units)
+        rnd_index = generator.uniform(0, 1, n_units)
         reactive_power[:, rnd_index > self.reactive_power_share] = 0
 
         return (active_power, reactive_power)
