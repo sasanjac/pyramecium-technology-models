@@ -48,13 +48,21 @@ class Households:
     lighting_profiles: Sequence[LightingProfiles]
     phase_distribution: tuple[float, float, float]
 
-    def run(self, n_units: int, n_steps: int, lat: float, lon: float, altitude: float, year: int, seed: int) -> None:
+    def run(
+        self,
+        n_units: int,
+        n_steps: int,
+        lat: float,
+        lon: float,
+        altitude: float,
+        year: int,
+        generator: np.random.Generator,
+    ) -> None:
         with geo.GeoRef() as georef:
             self.tz = georef.get_time_zone(lat=lat, lon=lon)
 
         self.n_steps = n_steps
         self.year = year
-        generator = np.random.default_rng(seed=seed)
 
         for app in self.appliances:
             app.run(
