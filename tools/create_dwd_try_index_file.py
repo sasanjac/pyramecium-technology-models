@@ -37,7 +37,7 @@ def create(*, input_path: pathlib.Path, year: int, scenario: str) -> None:
     weather_coords = [f.name.split("_")[1] for f in input_path.iterdir() if f.suffix == ".dat"]
     weather_right = np.array([coord[: len(coord) // 2] for coord in weather_coords], dtype=np.float64)
     weather_height = np.array([coord[len(coord) // 2 :] for coord in weather_coords], dtype=np.float64)
-    weather_nodes = np.array(list(zip(weather_height, weather_right, strict=True)))
+    weather_nodes = np.array(list(zip(weather_right, weather_height, strict=True)))
     logger.info("Generating coords. Done.")
     logger.info("Calculating bounds...")
     minx, miny = weather_nodes.min(axis=0)
@@ -50,7 +50,7 @@ def create(*, input_path: pathlib.Path, year: int, scenario: str) -> None:
     logger.info("Calculating voronoi. Done.")
     logger.info("Generating GeoDataFrame...")
     index = np.arange(0, len(weather_nodes))
-    gdf = gpd.GeoDataFrame(geometry=list(geometry.geoms), data={"value": index})
+    gdf = gpd.GeoDataFrame(geometry=list(geometry.geoms), data={"value": index}, crs="EPSG:3034")
     logger.info("Generating GeoDataFrame. Done.")
     output_file_path = input_path / f"dwd_try_{year}_{scenario}_index_epsg3034.feather"
     logger.info("Writing data to {output_file_path}...", output_file_path=output_file_path)

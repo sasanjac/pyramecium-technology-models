@@ -217,8 +217,8 @@ class OnOffProfiles(OperationProfiles):
         )
         time_on = np.sort(np.concatenate([time_on_weekdays, time_on_weekenddays], axis=0), axis=0)
         idx = (time_on[:-1, :] == time_on[1:, :]) & (time_on[1:, :] > 0)
-        while np.sum(idx) > 0:
-            idx = np.concatenate([idx, np.zeros((1, n_units))], axis=0)
+        while np.any(idx):
+            idx = np.concatenate([idx, np.full(shape=(1, n_units), fill_value=False)], axis=0)
             x, y = np.where(idx)
             time_on[x + 1, y] = time_on[x, y] + 1
             idx = (time_on[:-1, :] == time_on[1:, :]) & (time_on[1:, :] > 0)

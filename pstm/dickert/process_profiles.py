@@ -88,16 +88,16 @@ class ProcessProfiles(OnOffProfiles):
         time_off_2 = (time_off_1 + operation_length_2) * np.ceil(
             time_off_1 * operation_length_2 / (n_steps * np.max(operation_length_2)),
         ).astype(np.int64)
-        idx = (time_on[1:, :] <= time_off_2[:-1, :]) & time_on[1:, :] > 0
-        while np.sum(idx) > 0:
-            idx = np.concatenate([np.zeros((1, n_units)), idx], axis=0)
+        idx = (time_on[1:, :] <= time_off_2[:-1, :]) & (time_on[1:, :] > 0)
+        while np.any(idx):
+            idx = np.concatenate([np.full(shape=(1, n_units), fill_value=False), idx], axis=0)
             x, y = np.where(idx)
             diff = time_off_1[x, y] - time_on[x, y]
             diff2 = time_off_2[x, y] - time_on[x, y]
             time_on[x, y] = time_off_2[x - 1, y] + 1
             time_off_1[x, y] = time_on[x, y] + diff
             time_off_2[x, y] = time_on[x, y] + diff2
-            idx = (time_on[1:, :] <= time_off_2[:-1, :]) & time_on[1:, :] > 0
+            idx = (time_on[1:, :] <= time_off_2[:-1, :]) & (time_on[1:, :] > 0)
 
         p_1 = self._finalize_active_power(
             n_steps=n_steps,
@@ -106,6 +106,7 @@ class ProcessProfiles(OnOffProfiles):
             time_on=time_on,
             time_off=time_off_1,
         )
+
         p_2 = self._finalize_active_power(
             n_steps=n_steps,
             n_units=n_units,
@@ -148,4 +149,5 @@ class ProcessProfiles(OnOffProfiles):
             active_power=p,
             generator=generator,
         )
+
         return (p, q)

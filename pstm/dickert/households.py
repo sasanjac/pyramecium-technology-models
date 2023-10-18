@@ -48,6 +48,10 @@ class Households:
     lighting_profiles: Sequence[LightingProfiles]
     phase_distribution: tuple[float, float, float]
 
+    def __attrs_post_init__(self) -> None:
+        self.p = np.empty(shape=(0, 0), dtype=np.float64)
+        self.q = np.empty(shape=(0, 0), dtype=np.float64)
+
     def run(
         self,
         n_units: int,

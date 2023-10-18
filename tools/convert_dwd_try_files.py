@@ -52,10 +52,10 @@ def convert(
     dwd_files = [file for file in input_path.iterdir() if file.suffix == ".dat"]
     n_files = len(dwd_files)
     output_path.mkdir(exist_ok=True, parents=True)
-    tz = pytz.timezone("Europe/Berlin")
+    tz = "Europe/Berlin"
     date_index = dates.date_range(tz, freq=dt.timedelta(hours=1), year=year)
     file_name_template = f"dwd_try_{year}_{scenario}_{{:06d}}_epsg3034.feather"
-    with GeoRef(weather_gen_files_path=output_path, dwd_try_scenario=scenario, reference_epsg=3034) as georef:
+    with GeoRef(weather_gen_files_path=output_path, dwd_try_year=year, dwd_try_scenario=scenario, reference_epsg=3034) as georef:
         for i, file_path in enumerate(dwd_files):
             if file_path.suffix == ".dat":
                 logger.debug("Converting ({i}/{n_files}): {name}...", i=i, n_files=n_files, name=file_path.stem)
@@ -75,6 +75,7 @@ def convert(
                     year=year,
                     tz=tz,
                     index=date_index,
+                    freq="1H",
                 )
 
                 wg.to_feather(output_file)

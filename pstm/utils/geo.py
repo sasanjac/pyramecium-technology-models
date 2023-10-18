@@ -159,7 +159,7 @@ class GeoRef:
         else:
             self._init_weather_gen_index_file()
 
-        # self._init_clc_file_path() # noqa: ERA001
+        self._init_clc_file_path()
         self._init_time_zones_file()
         self._init_voronoi_file()
         self._init_transformers()
