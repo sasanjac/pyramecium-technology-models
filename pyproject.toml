@@ -31,7 +31,7 @@
   description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
   license = { file = "LICENSE" }
   name = "tech-models"
-  requires-python = ">=3.11"
+  requires-python = ">=3.10"
   version = "0.1.0"
 
   [project.urls]
