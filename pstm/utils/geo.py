@@ -70,10 +70,10 @@ class GeoRef:
         return self.get_value_for_coord(self._zip_codes, lat=lat, lon=lon)
 
     def get_zip_code_center(self, zip_code: str) -> tuple[float, float]:
-        matching_zip_codes = self._zip_codes.zip_code == str(zip_code)
+        matching_zip_codes = self._zip_codes.value == str(zip_code)
         polygon = self._zip_codes[matching_zip_codes].geometry.to_numpy()[0]
         point = polygon.centroid
-        return (point.y, point.x)
+        return self._transformer_3035_t.transform(xx=point.y, yy=point.x)
 
     def get_dwd_try_zone(self, lat: float, lon: float) -> str:
         zone: int = self.get_value_for_coord(self._dwd_try_zones, lat=lat, lon=lon)
@@ -130,7 +130,7 @@ class GeoRef:
             msg = "`use_raw_dwd_try_files` is set to `false`. Either set to `true` or use `get_weather_gen_file`."
             raise RuntimeError(msg)
 
-        lat, lon = self._transformer_3034.transform(xx=lon, yy=lat)
+        lon, lat = self._transformer_3034.transform(xx=lat, yy=lon)
         closest_index = distance.cdist([(lat, lon)], self._dwd_try_nodes).argmin()
         return self._dwd_try_files[closest_index]
 
@@ -185,15 +185,8 @@ class GeoRef:
     def _init_dwd_try_files(self) -> None:
         self._dwd_try_files = [
             f
-            for d in self.dwd_try_files_path.iterdir()
-            if d.is_dir()
-            for f in d.iterdir()
-            if (
-                f.is_file()
-                and f.suffix == ".dat"
-                and self.dwd_try_scenario in f.name
-                and str(self.dwd_try_year) in f.name
-            )
+            for f in (self.dwd_try_files_path / str(self.dwd_try_year) / self.dwd_try_scenario).iterdir()
+            if f.is_file() and f.suffix == ".dat"
         ]
         dwd_try_coords = [f.name.split("_")[1] for f in self._dwd_try_files]
         dwd_try_right = np.array([coord[: len(coord) // 2] for coord in dwd_try_coords], dtype=np.float64)
@@ -215,16 +208,8 @@ class GeoRef:
         logger.info("Loading weather generators files...")
         files = [
             f
-            for d in self.weather_gen_files_path.iterdir()
-            if d.is_dir()
-            for f in d.iterdir()
-            if (
-                f.is_file()
-                and f.suffix == ".feather"
-                and self.dwd_try_scenario in f.name
-                and str(self.dwd_try_year) in f.name
-                and "index" not in f.name
-            )
+            for f in (self.weather_gen_files_path / str(self.dwd_try_year) / self.dwd_try_scenario).iterdir()
+            if f.is_file() and f.suffix == ".dat" and "index" not in f.name
         ]
         self._weather_gen_files: dict[int, pathlib.Path] = {int(f.stem.split("_")[-1]): f for f in files}
         logger.info("Loading weather generators files. Done.")
@@ -269,6 +254,7 @@ class GeoRef:
         logger.info("Creating transformers...")
         self._transformer_3034 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:3034")
         self._transformer_3035 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:3035")
+        self._transformer_3035_t = pyproj.Transformer.from_crs("EPSG:3035", f"EPSG:{self.reference_epsg}")
         self._transformer_4326 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:4326")
         self._transformer_25832 = pyproj.Transformer.from_crs(f"EPSG:{self.reference_epsg}", "EPSG:25832")
         logger.info("Creating transformers. Done.")
