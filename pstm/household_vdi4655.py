@@ -134,9 +134,9 @@ class Household(Tech):
     n_units: int
     heat_demand: float
     area: float
+    tz: dt.tzinfo
     lat: float | None = None
     lon: float | None = None
-    tz: dt.tzinfo | None = None
     climate_zone: str | None = None
     freq: str = "1h"
 
@@ -208,7 +208,7 @@ class Household(Tech):
         return np.concatenate(energy_profiles) * 60 / 15  # kWh = kW * 15 min
 
     def _calculate_reactive_electrical_demand(self) -> npt.NDArray[np.float64]:
-        acp = self.acp.to_numpy()
+        acp = self.acp.hight.to_numpy()
         sign = random.randint(0, 1)  # capacitive or inductive
         cosphi = self._cosphi(sign, acp)
         return (sign * 2 - 1) * acp * np.tan(np.arccos(cosphi))

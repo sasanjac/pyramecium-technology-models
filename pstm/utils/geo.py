@@ -183,6 +183,7 @@ class GeoRef:
         logger.info("Loading DWD TRY zones file. Done.")
 
     def _init_dwd_try_files(self) -> None:
+        logger.info("Loading DWD TRY files...")
         self._dwd_try_files = [
             f
             for f in (self.dwd_try_files_path / str(self.dwd_try_year) / self.dwd_try_scenario).iterdir()
@@ -192,6 +193,7 @@ class GeoRef:
         dwd_try_right = np.array([coord[: len(coord) // 2] for coord in dwd_try_coords], dtype=np.float64)
         dwd_try_height = np.array([coord[len(coord) // 2 :] for coord in dwd_try_coords], dtype=np.float64)
         self._dwd_try_nodes = np.array(list(zip(dwd_try_height, dwd_try_right, strict=True)))
+        logger.info("Loading DWD TRY files. Done.")
 
     def _init_weather_gen_index_file(self) -> None:
         logger.info("Loading DWD TRY index file...")
