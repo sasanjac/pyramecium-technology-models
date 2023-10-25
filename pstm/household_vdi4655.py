@@ -138,7 +138,6 @@ class Household(Tech):
     lat: float | None = None
     lon: float | None = None
     climate_zone: str | None = None
-    freq: str = "1h"
 
     def __attrs_post_init__(self) -> None:
         self.factors = FACTORS_MAPPING[self.house_type][self.building_type]
