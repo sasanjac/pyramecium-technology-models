@@ -72,10 +72,10 @@ class PV(Tech):
     ) -> None:
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
-        self.acp.low = -self.mc.results.ac.to_numpy()
-        self.acp.base = self.acp.low
-        self.acq.low = self.acp.low * np.tan(np.arccos(self.cosphi))
-        self.acq.high = -self.acq.low
+        self.acp.low[1] = -self.mc.results.ac.to_numpy()
+        self.acp.base[1] = self.acp.low
+        self.acq.low[1] = self.acp.low * np.tan(np.arccos(self.cosphi))
+        self.acq.high[1] = -self.acq.low
 
     @classmethod
     def from_efficiency_and_area(

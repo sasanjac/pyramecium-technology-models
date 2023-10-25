@@ -179,7 +179,7 @@ class Household(Tech):
                 active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))
 
             acp = pd.Series(active_electrical_demand, index=index, name="p_el")
-            self.acp.high = acp.resample(self.freq).mean()
+            self.acp.high = acp.resample(self.dates.freq).mean()
             reactive_electrical_demand = self._calculate_reactive_electrical_demand()
             self.acq.high = pd.Series(reactive_electrical_demand, index=self.acp.index, name="q_el")
 
@@ -208,7 +208,7 @@ class Household(Tech):
         return np.concatenate(energy_profiles) * 60 / 15  # kWh = kW * 15 min
 
     def _calculate_reactive_electrical_demand(self) -> npt.NDArray[np.float64]:
-        acp = self.acp.high.to_numpy().flatten()
+        acp = self.acp.high[1].to_numpy()
         sign = random.randint(0, 1)  # capacitive or inductive
         cosphi = self._cosphi(sign, acp)
         return (sign * 2 - 1) * acp * np.tan(np.arccos(cosphi))
