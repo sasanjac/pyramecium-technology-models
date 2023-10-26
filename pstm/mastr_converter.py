@@ -22,7 +22,8 @@ if TYPE_CHECKING:
         n_files: NotRequired[int]
 
 
-CATALOG_PATH = pathlib.Path("data/mastr/Katalogwerte.xml")
+SRC_PATH = pathlib.Path(__file__).parent.parent
+CATALOG_PATH = pathlib.Path(SRC_PATH / "data/mastr/Katalogwerte.xml")
 DEFAULT_COLUMNS = [
     "Postleitzahl",
     "Nettonennleistung",
@@ -118,19 +119,19 @@ def export_dataframe(dataframe: pd.DataFrame, export_path: pathlib.Path) -> None
 def main() -> None:
     data: list[InputData] = [
         {
-            "path": pathlib.Path("data/mastr/EinheitenSolar"),
-            "export_path": pathlib.Path("data/mastr/20210727-EinheitenSolar_stripped.parquet.gzip"),
+            "path": SRC_PATH / "data/mastr/EinheitenSolar",
+            "export_path": SRC_PATH / "data/mastr/20210727-EinheitenSolar_stripped.parquet.gzip",
             "n_files": 21,
         },
         {
-            "path": pathlib.Path("data/mastr/EinheitenWind.xml"),
-            "export_path": pathlib.Path("data/mastr/20210727-EinheitenWindOnshore_stripped.parquet.gzip"),
+            "path": SRC_PATH / "data/mastr/EinheitenWind.xml",
+            "export_path": SRC_PATH / "data/mastr/20210727-EinheitenWindOnshore_stripped.parquet.gzip",
             "columns_extra": ["Nabenhoehe", "Hersteller", "Typenbezeichnung"],
             "conds_extra": [("Lage", "Windkraft an Land")],
         },
         {
-            "path": pathlib.Path("data/mastr/EinheitenWind.xml"),
-            "export_path": pathlib.Path("data/mastr/20210727-EinheitenWindOffshore_stripped.parquet.gzip"),
+            "path": SRC_PATH / "data/mastr/EinheitenWind.xml",
+            "export_path": SRC_PATH / "data/mastr/20210727-EinheitenWindOffshore_stripped.parquet.gzip",
             "columns_extra": ["Nabenhoehe", "Hersteller", "Typenbezeichnung"],
             "conds_extra": [("Lage", "Windkraft auf See")],
         },

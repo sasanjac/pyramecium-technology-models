@@ -32,6 +32,8 @@ if t.TYPE_CHECKING:
     TypeDays = list[str]
     TypeDaysMapping = dict[str, TypeDays]
 
+SRC_PATH = pathlib.Path(__file__).parent.parent
+
 ELECTRICITY_DEMAND_OFH = {
     1: 2350,
     2: 2020,
@@ -84,7 +86,7 @@ BUILDING_TYPES = t.Literal["EH", "LEH"]
 
 FACTORS_MAPPING_PATHS = {
     house_type: {
-        building_type: pathlib.Path(f"data/household/vdi4655/factors_{house_type}_{building_type}.json")
+        building_type: SRC_PATH / f"data/household/vdi4655/factors_{house_type}_{building_type}.json"
         for building_type in t.get_args(BUILDING_TYPES)
     }
     for house_type in t.get_args(HOUSE_TYPES)
@@ -102,7 +104,7 @@ FACTORS_MAPPING = {
 
 PROFILES_MAPPING_PATHS = {
     house_type: {
-        building_type: pathlib.Path(f"data/household/vdi4655/e_profile_{house_type}_{building_type}_15m.json")
+        building_type: SRC_PATH / f"data/household/vdi4655/e_profile_{house_type}_{building_type}_15m.json"
         for building_type in t.get_args(BUILDING_TYPES)
     }
     for house_type in t.get_args(HOUSE_TYPES)
@@ -118,7 +120,7 @@ PROFILES_MAPPING = {
     for house_type in t.get_args(HOUSE_TYPES)
 }
 
-TYPE_DAYS_PATH = pathlib.Path("data/household/vdi4655/type_days.json")
+TYPE_DAYS_PATH = SRC_PATH / "data/household/vdi4655/type_days.json"
 TYPE_DAYS_MAPPING = t.cast("TypeDaysMapping", load_json_from_file(TYPE_DAYS_PATH))
 
 
@@ -169,18 +171,34 @@ class Household(Tech):
             if random_shift is True:
                 thermal_demand = np.roll(thermal_demand, random.randint(-8, 8))
 
-            th = pd.Series(thermal_demand, index=index, name="p_th")
-            self.thr.high = th.resample(self.dates.freq).mean()
+            th_raw = pd.Series(data=thermal_demand, index=index)
+            th = pd.Series(data=th_raw, index=self.dates).interpolate(
+                method="spline",
+                order=1,
+                limit_direction="both",
+            )
+            self.thr.loc[:, ("high", 1)] = th.to_numpy()
 
         if electrical is True:
             active_electrical_demand = self._calculate_active_electrical_demand()
             if random_shift is True:
                 active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))
 
-            acp = pd.Series(active_electrical_demand, index=index, name="p_el")
-            self.acp.high = acp.resample(self.dates.freq).mean()
+            acp_raw = pd.Series(data=active_electrical_demand, index=index)
+            acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
+                method="spline",
+                order=1,
+                limit_direction="both",
+            )
+            self.acp.loc[:, ("high", 1)] = acp.to_numpy()
             reactive_electrical_demand = self._calculate_reactive_electrical_demand()
-            self.acq.high = pd.Series(reactive_electrical_demand, index=self.acp.index, name="q_el")
+            acq_raw = pd.Series(data=reactive_electrical_demand, index=index)
+            acq = pd.Series(data=acq_raw, index=self.dates).interpolate(
+                method="spline",
+                order=1,
+                limit_direction="both",
+            )
+            self.acq.loc[:, ("high", 1)] = acq.to_numpy()
 
     def _calculate_water_thermal_demand(self) -> npt.NDArray[np.float64]:
         energy = WATER_DEMAND[self.house_type] * self.n_units

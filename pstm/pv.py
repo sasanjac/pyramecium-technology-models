@@ -72,10 +72,16 @@ class PV(Tech):
     ) -> None:
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
-        self.acp.low[1] = -self.mc.results.ac.to_numpy()
-        self.acp.base[1] = self.acp.low
-        self.acq.low[1] = self.acp.low * np.tan(np.arccos(self.cosphi))
-        self.acq.high[1] = -self.acq.low
+        acp_raw = pd.Series(data=-self.mc.results.ac.to_numpy(), index=weather.index)
+        acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
+            method="spline",
+            order=1,
+            limit_direction="both",
+        )
+        self.acp.loc[:, ("low", 1)] = acp.to_numpy()
+        self.acp.loc[:, ("base", 1)] = self.acp.low
+        self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("high", 1)] = -self.acq.low
 
     @classmethod
     def from_efficiency_and_area(

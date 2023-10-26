@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import pathlib
+
 import attrs
 import numpy as np
 import pandas as pd
@@ -12,6 +14,7 @@ import windpowerlib.modelchain as wmc
 
 from pstm.base import Tech
 
+SRC_PATH = pathlib.Path(__file__).parent.parent
 DEFAULT_TURBINE = wpl.WindTurbine(turbine_type="E-126/4200", hub_height=135)
 DEFAULT_POWER_CURVE_WIND = DEFAULT_TURBINE.power_curve["wind_speed"]
 DEFAULT_POWER_CURVE_POWER = DEFAULT_TURBINE.power_curve["value"] / DEFAULT_TURBINE.power_curve["value"].max()
@@ -61,9 +64,16 @@ class Wind(Tech):
 
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
-        self.acp.low = -self.mc.power_output.to_numpy()
-        self.acq.low = self.acp.low * np.tan(np.arccos(self.cosphi))
-        self.acq.high = -self.acq.low
+        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index)
+        acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
+            method="spline",
+            order=1,
+            limit_direction="both",
+        )
+        self.acp.loc[:, ("low", 1)] = acp.to_numpy()
+        self.acp.loc[:, ("base", 1)] = self.acp.low
+        self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("high", 1)] = -self.acq.low
 
     @property
     def ac(self) -> pd.Series:
@@ -90,9 +100,16 @@ class WindFarm(Tech):
 
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
-        self.acp.low = -self.mc.power_output.to_numpy()
-        self.acq.low = self.acp.low * np.tan(np.arccos(self.cosphi))
-        self.acq.high = -self.acq.low
+        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index)
+        acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
+            method="spline",
+            order=1,
+            limit_direction="both",
+        )
+        self.acp.loc[:, ("low", 1)] = acp.to_numpy()
+        self.acp.loc[:, ("base", 1)] = self.acp.low
+        self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("high", 1)] = -self.acq.low
 
     @property
     def ac(self) -> pd.Series:
@@ -100,7 +117,7 @@ class WindFarm(Tech):
 
     @classmethod
     def from_power_inst(cls, dates: pd.DatetimeIndex, power_inst: float) -> WindFarm:
-        dataframe = pd.read_feather("data/wind/turbines.feather")
+        dataframe = pd.read_feather(SRC_PATH / "data/wind/turbines.feather")
         data = dataframe.sample()
         unit_data = {
             "turbine_type": data.turbine_type.to_numpy()[0],
@@ -118,7 +135,7 @@ class WindFarm(Tech):
         powers_inst: list[float],
         hub_heights: list[float],
     ) -> WindFarm:
-        dataframe = pd.read_feather("data/wind/turbines.feather")
+        dataframe = pd.read_feather(SRC_PATH / "data/wind/turbines.feather")
         units: list[wpl.WindTurbine] = []
         for hub_height in hub_heights:
             condition = (dataframe.hub_height - hub_height).abs().argsort()

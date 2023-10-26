@@ -29,19 +29,19 @@ if t.TYPE_CHECKING:
 
     T = TypeVar("T")
 
-
-DEFAULT_DWD_TRY_FILES_PATH = pathlib.Path("data/weather/weather")
-DEFAULT_WEATHER_GEN_FILES_PATH = pathlib.Path("data/weather/weather")
-DEFAULT_NEWA_FILES_PATH = pathlib.Path("data/weather/weather")
-DEFAULT_DWD_TRY_YEAR = 2045
-DEFAULT_NEWA_YEAR = 2018
-DEFAULT_DWD_TRY_SCENARIO: Literal["mittel", "sommerwarm", "winterkalt"] = "mittel"
-DEFAULT_CLC_FILE_PATH = pathlib.Path("data/geo/clc_europe_epsg3035.feather")
-DEFAULT_ZIP_CODES_FILE_PATH = pathlib.Path("data/geo/zip_codes_germany_epsg4326.feather")
-DEFAULT_ALTITUDE_FILE_PATH = pathlib.Path("data/geo/altitude_germany_20m_epsg25832.tif")
-DEFAULT_DWD_TRY_ZONES_FILE_PATH = pathlib.Path("data/geo/dwd_try_zones_epsg4326.feather")
-DEFAULT_TIME_ZONES_FILE_PATH = pathlib.Path("data/geo/time_zones_epsg4326.feather")
+SRC_PATH = pathlib.Path(__file__).parent.parent
 ALTITUDE_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},{{}}"
+DEFAULT_ALTITUDE_FILE_PATH = SRC_PATH / "data/geo/altitude_germany_20m_epsg25832.tif"
+DEFAULT_CLC_FILE_PATH = SRC_PATH / "data/geo/clc_europe_epsg3035.feather"
+DEFAULT_DWD_TRY_FILES_PATH = SRC_PATH / "data/weather/weather"
+DEFAULT_DWD_TRY_SCENARIO: Literal["mittel", "sommerwarm", "winterkalt"] = "mittel"
+DEFAULT_DWD_TRY_YEAR = 2045
+DEFAULT_DWD_TRY_ZONES_FILE_PATH = SRC_PATH / "data/geo/dwd_try_zones_epsg4326.feather"
+DEFAULT_NEWA_FILES_PATH = SRC_PATH / "data/weather/weather"
+DEFAULT_NEWA_YEAR = 2018
+DEFAULT_TIME_ZONES_FILE_PATH = SRC_PATH / "data/geo/time_zones_epsg4326.feather"
+DEFAULT_WEATHER_GEN_FILES_PATH = SRC_PATH / "data/weather/weather"
+DEFAULT_ZIP_CODES_FILE_PATH = SRC_PATH / "data/geo/zip_codes_germany_epsg4326.feather"
 
 
 def get_altitude_from_api(lat: float, lon: float) -> float:
