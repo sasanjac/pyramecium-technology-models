@@ -5,16 +5,13 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING
 
 import attrs
 import numpy as np
+import pandas as pd
 import pvlib
 
 from pstm.base import Tech
-
-if TYPE_CHECKING:
-    import pandas as pd
 
 GAMMA_TEMP = -0.004
 E0 = 1000

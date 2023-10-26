@@ -225,7 +225,7 @@ class OnOffProfiles(OperationProfiles):
 
         return time_on
 
-    def _calc_time_on(
+    def _calc_time_on(  # noqa: PLR0913
         self,
         *,
         n_steps: int,
