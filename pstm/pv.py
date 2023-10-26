@@ -69,7 +69,8 @@ class PV(Tech):
     ) -> None:
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
-        acp_raw = pd.Series(data=-self.mc.results.ac.to_numpy(), index=weather.index)
+        delta = self.dates[0] - weather.index[0]
+        acp_raw = pd.Series(data=-self.mc.results.ac.to_numpy(), index=weather.index + delta)
         acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
             method="spline",
             order=1,

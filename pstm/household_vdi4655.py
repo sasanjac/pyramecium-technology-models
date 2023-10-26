@@ -171,7 +171,8 @@ class Household(Tech):
             if random_shift is True:
                 thermal_demand = np.roll(thermal_demand, random.randint(-8, 8))
 
-            th_raw = pd.Series(data=thermal_demand, index=index)
+            delta = self.dates[0] - index[0]
+            th_raw = pd.Series(data=thermal_demand, index=index + delta)
             th = pd.Series(data=th_raw, index=self.dates).interpolate(
                 method="spline",
                 order=1,
@@ -184,7 +185,8 @@ class Household(Tech):
             if random_shift is True:
                 active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))
 
-            acp_raw = pd.Series(data=active_electrical_demand, index=index)
+            delta = self.dates[0] - index[0]
+            acp_raw = pd.Series(data=active_electrical_demand, index=index + delta)
             acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
                 method="spline",
                 order=1,

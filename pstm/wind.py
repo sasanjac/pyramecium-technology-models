@@ -64,7 +64,8 @@ class Wind(Tech):
 
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
-        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index)
+        delta = self.dates[0] - weather.index[0]
+        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index + delta)
         acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
             method="spline",
             order=1,
@@ -100,7 +101,8 @@ class WindFarm(Tech):
 
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
-        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index)
+        delta = self.dates[0] - weather.index[0]
+        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index + delta)
         acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
             method="spline",
             order=1,
