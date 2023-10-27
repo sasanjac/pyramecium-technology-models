@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import attrs
+import numba
 import numpy as np
 import numpy.typing as npt
 
@@ -27,6 +28,7 @@ class ProcessProfiles(OnOffProfiles):
     operation_2_parameter_1: float
     operation_2_parameter_2: float
 
+    @numba.njit
     def _run(
         self,
         *,

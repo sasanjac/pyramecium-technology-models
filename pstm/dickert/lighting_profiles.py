@@ -9,6 +9,7 @@ import datetime as dt
 import typing as t
 
 import attrs
+import numba
 import numpy as np
 import numpy.typing as npt
 import pvlib
@@ -70,6 +71,7 @@ class LightingProfiles(Appliances):
         validator=validate_level_sequence,
     )
 
+    @numba.njit
     def _run(
         self,
         *,
@@ -148,6 +150,7 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
+    @numba.njit
     def _calc_wd_evening(
         self,
         *,
@@ -171,6 +174,7 @@ class LightingProfiles(Appliances):
             add_tail=True,
         )
 
+    @numba.njit
     def _calc_we_evening(
         self,
         *,
@@ -193,6 +197,7 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
+    @numba.njit
     def _calc_evening(
         self,
         *,
@@ -260,6 +265,7 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
+    @numba.njit
     def _calc_wd_morning(
         self,
         *,
@@ -283,6 +289,7 @@ class LightingProfiles(Appliances):
             add_tail=True,
         )
 
+    @numba.njit
     def _calc_we_morning(
         self,
         *,
@@ -305,6 +312,7 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
+    @numba.njit
     def _calc_morning(
         self,
         *,
@@ -371,6 +379,7 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
+    @numba.njit
     def _calc_power_from_times(
         self,
         *,
@@ -407,6 +416,7 @@ class LightingProfiles(Appliances):
             time_off=time_off,
         )
 
+    @numba.njit
     def _calc_time_on_user(  # noqa: PLR0913
         self,
         *,
@@ -452,6 +462,7 @@ class LightingProfiles(Appliances):
         time_on_weekday_mid[time_on_weekday_mid < 1] = 1
         return time_on_weekday_mid
 
+    @numba.njit
     def _calc_time_off_user(  # noqa: PLR0913
         self,
         *,
@@ -495,6 +506,7 @@ class LightingProfiles(Appliances):
         )
         return idx + prob
 
+    @numba.njit
     def _calc_time_off_sunrise(
         self,
         *,
@@ -533,6 +545,7 @@ class LightingProfiles(Appliances):
         )
         return idx * samples_per_day + sunrise[idx] + prob
 
+    @numba.njit
     def _calc_time_on_sunset(
         self,
         *,

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import attrs
+import numba
 import numpy as np
 import numpy.typing as npt
 from loguru import logger
@@ -36,6 +37,7 @@ class CycleProfiles(OperationProfiles):
     period_parameter_3: float
     period_variation: float = attrs.field(validator=validate_pm_level)
 
+    @numba.njit
     def _run(
         self,
         *,
@@ -96,6 +98,7 @@ class CycleProfiles(OperationProfiles):
             generator=generator,
         )
 
+    @numba.njit
     def _calc_period_length(
         self,
         *,
@@ -137,6 +140,7 @@ class CycleProfiles(OperationProfiles):
         period_length[period_length <= 0] = 1
         return period_length
 
+    @numba.njit
     def _calc_operation_length(
         self,
         *,
@@ -179,5 +183,6 @@ class CycleProfiles(OperationProfiles):
         operation_length[operation_length <= 0] = 1
         return operation_length
 
+    @numba.njit
     def _find_step_max(self, *, n_steps: int, period_length: npt.NDArray[np.int64], unit: int) -> np.int64:
         return np.argmax(np.cumsum(period_length[:, unit], axis=0) > n_steps)

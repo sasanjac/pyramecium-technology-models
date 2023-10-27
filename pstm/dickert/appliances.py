@@ -9,6 +9,7 @@ import abc
 import typing as t
 
 import attrs
+import numba
 import numpy as np
 from loguru import logger
 
@@ -76,6 +77,7 @@ class Appliances:
     reactive_power_parameter_2: float = attrs.field(validator=validate_level)
     reactive_power_parameter_3: float = attrs.field(validator=validate_level)
 
+    @numba.njit
     def _sim_distribution(
         self,
         *,
@@ -121,6 +123,7 @@ class Appliances:
     def _time_as_float(self, time: dt.time) -> float:
         return time.hour / 24 + time.minute / (24 * 60)
 
+    @numba.njit
     def _finalize_active_power(
         self,
         *,
@@ -141,6 +144,7 @@ class Appliances:
         p = p[:n_steps, :]
         return p * active_power
 
+    @numba.njit
     def run(
         self,
         *,
@@ -203,6 +207,7 @@ class Appliances:
             tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]] -- active and reactive power
         """
 
+    @numba.njit
     def _finalize_power(
         self,
         *,
@@ -230,6 +235,7 @@ class Appliances:
 
         return (active_power, reactive_power)
 
+    @numba.njit
     def _calc_steps(
         self,
         *,

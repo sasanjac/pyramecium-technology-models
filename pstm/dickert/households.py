@@ -11,6 +11,7 @@ import json
 import typing as t
 
 import cattrs
+import numba
 import numpy as np
 import pandas as pd
 
@@ -262,6 +263,7 @@ class Households:
 
         return cattrs.structure(data, Households)
 
+    @numba.njit
     def get(self, index: pd.DatetimeIndex) -> Tech:
         p, self.p = (self.p[:, 0, :], self.p[:, 1:, :])
         q, self.q = (self.q[:, 0, :], self.q[:, 1:, :])

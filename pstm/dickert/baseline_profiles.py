@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import attrs
+import numba
 import numpy as np
 import numpy.typing as npt
 
@@ -19,6 +20,7 @@ class BaselineProfiles(Appliances):
     power_variation: float = attrs.field(validator=validate_level)
     power_variation_max: float
 
+    @numba.njit
     def _run(
         self,
         *,

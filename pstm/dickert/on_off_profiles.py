@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime as dt
 
 import attrs
+import numba
 import numpy as np
 import numpy.typing as npt
 from loguru import logger
@@ -81,6 +82,7 @@ class OnOffProfiles(OperationProfiles):
             ),
         )
 
+    @numba.njit
     def _run(
         self,
         *,
@@ -148,6 +150,7 @@ class OnOffProfiles(OperationProfiles):
             generator=generator,
         )
 
+    @numba.njit
     def _calc_operation_length(
         self,
         *,
@@ -184,6 +187,7 @@ class OnOffProfiles(OperationProfiles):
         operation_length[operation_length <= 0] = 1
         return operation_length
 
+    @numba.njit
     def _calc_time_on_total(
         self,
         *,
@@ -225,6 +229,7 @@ class OnOffProfiles(OperationProfiles):
 
         return time_on
 
+    @numba.njit
     def _calc_time_on(  # noqa: PLR0913
         self,
         *,
@@ -311,6 +316,7 @@ class OnOffProfiles(OperationProfiles):
 
         return np.zeros((n_days, n_units), dtype=np.int64)
 
+    @numba.njit
     def _sim_p_distribution(
         self,
         *,

@@ -11,6 +11,7 @@
     "geopandas",
     "loguru",
     "matplotlib",
+    "numba",
     "numpy",
     "open-mastr",
     "openpyxl",
