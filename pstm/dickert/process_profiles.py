@@ -35,7 +35,11 @@ class ProcessProfiles(OnOffProfiles):
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        **_,
+        lat: float,
+        lon: float,
+        altitude: float,
+        year: int,
+        tz: str,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,

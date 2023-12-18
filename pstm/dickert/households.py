@@ -200,6 +200,8 @@ class Households:
 
     def run(
         self,
+        /,
+        *,
         n_units: int,
         n_steps: int,
         lat: float,
@@ -207,6 +209,7 @@ class Households:
         altitude: float,
         year: int,
         generator: np.random.Generator,
+        baseline_only: bool = False,
     ) -> None:
         with geo.GeoRef() as georef:
             self.tz = georef.get_time_zone(lat=lat, lon=lon)
@@ -214,7 +217,8 @@ class Households:
         self.n_steps = n_steps
         self.year = year
 
-        for app in self.appliances:
+        appliances = self.appliances if not baseline_only else self.baseline_appliances
+        for app in appliances:
             app.run(
                 n_units=n_units,
                 n_steps=n_steps,
@@ -227,8 +231,12 @@ class Households:
                 generator=generator,
             )
 
-        self.p = np.sum([app.p for app in self.appliances], axis=0)
-        self.q = np.sum([app.q for app in self.appliances], axis=0)
+        self.p = np.sum([app.p for app in appliances], axis=0)
+        self.q = np.sum([app.q for app in appliances], axis=0)
+
+    @property
+    def baseline_appliances(self) -> cabc.Sequence[Appliances]:
+        return self.baseline_profiles + self.cycle_profiles  # type: ignore[operator]
 
     @property
     def appliances(self) -> cabc.Sequence[Appliances]:

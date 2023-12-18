@@ -32,7 +32,7 @@
   description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
   license = { file = "LICENSE" }
   name = "tech-models"
-  requires-python = ">=3.10"
+  requires-python = ">=3.10,<3.11"
   version = "0.1.0"
 
   [project.urls]
@@ -88,7 +88,11 @@
   select = ["ALL"]
 
   [tool.ruff.flake8-type-checking]
-    runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
+    runtime-evaluated-decorators = [
+      "attrs.define",
+      "attrs.frozen",
+      "numba.njit",
+    ]
 
   [tool.ruff.isort]
     force-single-line = true

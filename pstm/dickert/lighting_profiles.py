@@ -213,7 +213,7 @@ class LightingProfiles(Appliances):
     ) -> npt.NDArray[np.float64]:
         top_1 = self.time_on_parameters_1[parameter_index]
         top_2 = self.time_on_parameters_2[parameter_index]
-        if top_1 != NaT and top_2 != NaT:
+        if NaT not in {top_1, top_2}:
             time_on_user = self._calc_time_on_user(
                 n_units=n_units,
                 n_steps=n_steps,
@@ -340,7 +340,7 @@ class LightingProfiles(Appliances):
         )
         top_1 = self.time_off_parameters_1[parameter_index]
         top_2 = self.time_off_parameters_2[parameter_index]
-        if top_1 != NaT and top_2 != NaT:
+        if NaT not in {top_1, top_2}:
             time_off_user = self._calc_time_off_user(
                 n_units=n_units,
                 n_steps=n_steps,

@@ -89,7 +89,11 @@ class OnOffProfiles(OperationProfiles):
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        **_,
+        lat: float,
+        lon: float,
+        altitude: float,
+        year: int,
+        tz: str,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_p_distribution(
             distribution_type=self.active_power_distribution_type,
@@ -250,7 +254,7 @@ class OnOffProfiles(OperationProfiles):
             for i in range(parameter_index_start, parameter_index_end):
                 top_1 = self.time_on_parameters_1[i]
                 top_2 = self.time_on_parameters_2[i]
-                if top_1 != NaT and top_2 != NaT:
+                if NaT not in {top_1, top_2}:
                     samples_per_day = Constants.MINUTES_PER_DAY // step_length
                     steps = self._calc_steps(
                         day_index_start=day_index_start,

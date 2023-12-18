@@ -29,7 +29,7 @@ if t.TYPE_CHECKING:
 
     T = TypeVar("T")
 
-SRC_PATH = pathlib.Path(__file__).parent.parent
+SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 ALTITUDE_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},{{}}"
 DEFAULT_ALTITUDE_FILE_PATH = SRC_PATH / "data/geo/altitude_germany_20m_epsg25832.tif"
 DEFAULT_CLC_FILE_PATH = SRC_PATH / "data/geo/clc_europe_epsg3035.feather"
@@ -64,6 +64,7 @@ class GeoRef:
     time_zones_file_path: pathlib.Path = DEFAULT_TIME_ZONES_FILE_PATH
     reference_epsg: int = 4326
     use_raw_dwd_try_files: bool = False
+    use_clc: bool = True
     voronoi_file_path: pathlib.Path | None = None
 
     def get_zip_code(self, lat: float, lon: float) -> int:
@@ -118,6 +119,8 @@ class GeoRef:
         index = self.get_weather_gen_index(lat=lat, lon=lon)
         return (
             self.weather_gen_files_path
+            / str(self.dwd_try_year)
+            / self.dwd_try_scenario
             / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_{index:06d}_epsg3034.feather"
         )
 
@@ -159,7 +162,9 @@ class GeoRef:
         else:
             self._init_weather_gen_index_file()
 
-        self._init_clc_file_path()
+        if self.use_clc:
+            self._init_clc_file_path()
+
         self._init_time_zones_file()
         self._init_voronoi_file()
         self._init_transformers()
@@ -198,12 +203,16 @@ class GeoRef:
     def _init_weather_gen_index_file(self) -> None:
         logger.info("Loading DWD TRY index file...")
         index_file_path = (
-            self.weather_gen_files_path / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_index_epsg3034.feather"
+            self.weather_gen_files_path
+            / str(self.dwd_try_year)
+            / self.dwd_try_scenario
+            / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_index_epsg3034.feather"
         )
         try:
             self._weather_gen_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
         except FileNotFoundError:
             logger.warning("Could not find DWD TRY index file. Some methods may not work properly.")
+
         logger.info("Loading DWD TRY index file. Done.")
 
     def _init_weather_gen_files(self) -> None:

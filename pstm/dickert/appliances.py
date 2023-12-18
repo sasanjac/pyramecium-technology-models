@@ -11,7 +11,6 @@ import typing as t
 import attrs
 import numba
 import numpy as np
-from loguru import logger
 
 if t.TYPE_CHECKING:
     import datetime as dt
@@ -129,7 +128,7 @@ class Appliances:
         *,
         n_steps: int,
         n_units: int,
-        active_power: npt.NDArray[np.int64],
+        active_power: npt.NDArray[np.float64],
         time_on: npt.NDArray[np.int64],
         time_off: npt.NDArray[np.int64],
     ) -> npt.NDArray[np.float64]:
@@ -156,7 +155,7 @@ class Appliances:
         lon: float,
         altitude: float,
         year: int,
-        tz: dt.tzinfo,
+        tz: str,
     ) -> None:
         p, q = self._run(
             n_units=n_units,
@@ -169,7 +168,8 @@ class Appliances:
             generator=generator,
         )
         if np.any(p < 0):
-            logger.warning("Active power is negative")
+            msg = "active power can not be negative."
+            raise ValueError(msg)
 
         if self.phase == 0:
             self.phase = generator.choice((1, 2, 3), p=phase_distribution)
@@ -190,7 +190,7 @@ class Appliances:
         lon: float,
         altitude: float,
         year: int,
-        tz: dt.tzinfo,
+        tz: str,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Internal power calculation method.
 
@@ -201,7 +201,7 @@ class Appliances:
             lon {float} -- longitude of household location
             altitude {float} -- altitude of household location
             year {int} -- year of power profile
-            tz {dt.tzinfo} -- timezone of household location
+            tz {str} -- timezone of household location
 
         Returns:
             tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]] -- active and reactive power

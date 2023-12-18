@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import zoneinfo
 from dataclasses import dataclass
 from dataclasses import field
 from typing import TYPE_CHECKING
@@ -74,14 +75,14 @@ class WeatherGenerator:
                 "p",
             ],
         )
-        dataframe = dataframe.reset_index()
+        dataframe = dataframe.reset_index().drop(["index"], axis=1)
         dataframe.to_feather(file_path)
         metadata = {
-            "tz": self.tz,
+            "tz": str(self.tz),
             "lat": self.lat,
             "lon": self.lon,
             "rl": self.roughness_length,
-            "freq": self.freq,
+            "freq": str(self.freq.seconds),
             "year": self.year,
         }
         with file_path.with_suffix(".meta").open("w", encoding="utf-8") as file_handle:
@@ -98,14 +99,16 @@ class WeatherGenerator:
         index: pd.DatetimeIndex | None = None,
         freq: dt.timedelta = dt.timedelta(hours=1),
         year: int = 2050,
+        skiprows: int = 32,
     ) -> WeatherGenerator:
-        weather = pd.read_csv(dwd_file_path, skiprows=34, sep=r"\s+")
+        weather = pd.read_csv(dwd_file_path, skiprows=skiprows, sep=r"\s+")
+        weather = weather.drop(0, axis=0)
         weather = weather.dropna()
         if tz is None:
             tz = georef.get_time_zone(lat=lat, lon=lon)
 
         if index is None:
-            index = dates.date_range(tz, freq=dt.timedelta(hours=1), year=year)
+            index = dates.date_range(tz, freq=freq, year=year)
 
         weather.index = index
         if freq != dt.timedelta(hours=1):
@@ -131,18 +134,20 @@ class WeatherGenerator:
     @classmethod
     def from_feather(cls, file_path: pathlib.Path) -> WeatherGenerator:
         dataframe = pd.read_feather(file_path)
-        dataframe.index = pd.Index(dataframe.pop("index"))
         with file_path.with_suffix(".meta").open(encoding="utf-8") as file_handle:
             metadata = json.load(file_handle)
 
+        freq = dt.timedelta(seconds=int(metadata["freq"]))
+        tz = zoneinfo.ZoneInfo(metadata["tz"])
+        dataframe.index = dates.date_range(year=metadata["year"], freq=freq, tz=tz)
         transformer = pyproj.Transformer.from_crs("EPSG:3034", "EPSG:4326")
         lat, lon = transformer.transform(xx=metadata["lat"], yy=metadata["lon"])
         return WeatherGenerator(
             lat=lat,
             lon=lon,
-            tz=metadata["tz"],
+            tz=tz,
             roughness_length=metadata["rl"],
-            freq=metadata["freq"],
+            freq=freq,
             year=metadata["year"],
             ghi=dataframe.ghi,
             dhi=dataframe.dhi,

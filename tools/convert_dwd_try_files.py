@@ -40,6 +40,11 @@ from pstm.utils.weather import WeatherGenerator
     "--scenario",
     help="DWD TRY scenario.",
 )
+@click.option(
+    "--skiprows",
+    type=click.INT,
+    help="Rows to skip (2015: 32, 2045: 34).",
+)
 @click.option("--delete", is_flag=True, default=False, help="Whether to delete the source file.")
 def convert(
     *,
@@ -47,6 +52,7 @@ def convert(
     output_path: pathlib.Path,
     year: int,
     scenario: Literal["mittel", "sommerwarm", "winterkalt"],
+    skiprows: int,
     delete: bool = False,
 ) -> None:
     dwd_files = [file for file in input_path.iterdir() if file.suffix == ".dat"]
@@ -68,7 +74,7 @@ def convert(
                 lat = int(coord[len(coord) // 2 :])
                 lon = int(coord[: len(coord) // 2])
                 index = georef.get_weather_gen_index(lat=lat, lon=lon)
-                output_file = output_path / file_name_template.format(index)
+                output_file = output_path / str(year) / scenario / file_name_template.format(index)
                 if output_file.exists():
                     continue
 
@@ -81,6 +87,7 @@ def convert(
                     tz=tz,
                     index=date_index,
                     freq=dt.timedelta(hours=1),
+                    skiprows=skiprows,
                 )
 
                 wg.to_feather(output_file)
