@@ -9,7 +9,6 @@ import datetime as dt
 import typing as t
 
 import attrs
-import numba
 import numpy as np
 import numpy.typing as npt
 import pvlib
@@ -71,18 +70,17 @@ class LightingProfiles(Appliances):
         validator=validate_level_sequence,
     )
 
-    @numba.njit
     def _run(
         self,
         *,
         n_units: int,
         n_steps: int,
+        generator: np.random.Generator,
         lat: float,
         lon: float,
         altitude: float,
         year: int,
         tz: dt.tzinfo,
-        generator: np.random.Generator,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         location = pvlib.location.Location(
             latitude=lat,
@@ -150,7 +148,6 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
-    @numba.njit
     def _calc_wd_evening(
         self,
         *,
@@ -174,7 +171,6 @@ class LightingProfiles(Appliances):
             add_tail=True,
         )
 
-    @numba.njit
     def _calc_we_evening(
         self,
         *,
@@ -197,7 +193,6 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
-    @numba.njit
     def _calc_evening(
         self,
         *,
@@ -265,7 +260,6 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
-    @numba.njit
     def _calc_wd_morning(
         self,
         *,
@@ -289,7 +283,6 @@ class LightingProfiles(Appliances):
             add_tail=True,
         )
 
-    @numba.njit
     def _calc_we_morning(
         self,
         *,
@@ -312,7 +305,6 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
-    @numba.njit
     def _calc_morning(
         self,
         *,
@@ -379,7 +371,6 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
-    @numba.njit
     def _calc_power_from_times(
         self,
         *,
@@ -406,8 +397,8 @@ class LightingProfiles(Appliances):
         )
         prob_2 = self.time_on_variations[0]
         idx = prob_2 > prob_1
-        time_on = time_on * idx
-        time_off = time_off * idx
+        time_on = (time_on * idx).astype(np.int64)
+        time_off = (time_off * idx).astype(np.int64)
         return self._finalize_active_power(
             n_steps=n_steps,
             n_units=n_units,
@@ -416,7 +407,6 @@ class LightingProfiles(Appliances):
             time_off=time_off,
         )
 
-    @numba.njit
     def _calc_time_on_user(  # noqa: PLR0913
         self,
         *,
@@ -431,8 +421,8 @@ class LightingProfiles(Appliances):
         generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
-        step_length = Constants.MINUTES_PER_YEAR // n_steps
-        samples_per_day = Constants.MINUTES_PER_DAY // step_length
+        step_length = Constants.MINUTES_PER_YEAR / n_steps
+        samples_per_day = int(Constants.MINUTES_PER_DAY / step_length)
         steps = self._calc_steps(
             day_index_start=day_index_start,
             day_index_end=day_index_end,
@@ -446,7 +436,7 @@ class LightingProfiles(Appliances):
             / step_length
             + np.sort(steps)[:, np.newaxis]
         ).astype(np.int64)
-        prob = self._sim_distribution(
+        prob = self._sim_distribution_round(
             distribution_type=time_on_distribution_types,
             parameter_1=0,
             parameter_2=self._time_as_float(time_on_parameters_2)
@@ -462,7 +452,6 @@ class LightingProfiles(Appliances):
         time_on_weekday_mid[time_on_weekday_mid < 1] = 1
         return time_on_weekday_mid
 
-    @numba.njit
     def _calc_time_off_user(  # noqa: PLR0913
         self,
         *,
@@ -477,8 +466,8 @@ class LightingProfiles(Appliances):
         generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
-        step_length = Constants.MINUTES_PER_YEAR // n_steps
-        samples_per_day = Constants.MINUTES_PER_DAY // step_length
+        step_length = Constants.MINUTES_PER_YEAR / n_steps
+        samples_per_day = int(Constants.MINUTES_PER_DAY / step_length)
         steps = self._calc_steps(
             day_index_start=day_index_start,
             day_index_end=day_index_end,
@@ -492,7 +481,7 @@ class LightingProfiles(Appliances):
             / step_length
             + np.sort(steps)[:, np.newaxis]
         ).astype(np.int64)
-        prob = self._sim_distribution(
+        prob = self._sim_distribution_round(
             distribution_type=time_off_distribution_types,
             parameter_1=0,
             parameter_2=self._time_as_float(time_off_parameters_2)
@@ -506,7 +495,6 @@ class LightingProfiles(Appliances):
         )
         return idx + prob
 
-    @numba.njit
     def _calc_time_off_sunrise(
         self,
         *,
@@ -519,8 +507,8 @@ class LightingProfiles(Appliances):
         generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
-        step_length = Constants.MINUTES_PER_YEAR // n_steps
-        samples_per_day = Constants.MINUTES_PER_DAY // step_length
+        step_length = Constants.MINUTES_PER_YEAR / n_steps
+        samples_per_day = Constants.MINUTES_PER_DAY / step_length
         steps = self._calc_steps(
             day_index_start=day_index_start,
             day_index_end=day_index_end,
@@ -545,7 +533,6 @@ class LightingProfiles(Appliances):
         )
         return idx * samples_per_day + sunrise[idx] + prob
 
-    @numba.njit
     def _calc_time_on_sunset(
         self,
         *,
@@ -558,8 +545,8 @@ class LightingProfiles(Appliances):
         generator: np.random.Generator,
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
-        step_length = Constants.MINUTES_PER_YEAR // n_steps
-        samples_per_day = Constants.MINUTES_PER_DAY // step_length
+        step_length = Constants.MINUTES_PER_YEAR / n_steps
+        samples_per_day = Constants.MINUTES_PER_DAY / step_length
         steps = self._calc_steps(
             day_index_start=day_index_start,
             day_index_end=day_index_end,

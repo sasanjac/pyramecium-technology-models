@@ -8,7 +8,6 @@ from __future__ import annotations
 import datetime as dt
 
 import attrs
-import numba
 import numpy as np
 import numpy.typing as npt
 from loguru import logger
@@ -82,18 +81,17 @@ class OnOffProfiles(OperationProfiles):
             ),
         )
 
-    @numba.njit
     def _run(
         self,
         *,
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,
-        lon: float,
-        altitude: float,
-        year: int,
-        tz: str,
+        lat: float,  # noqa: ARG002
+        lon: float,  # noqa: ARG002
+        altitude: float,  # noqa: ARG002
+        year: int,  # noqa: ARG002
+        tz: dt.tzinfo,  # noqa: ARG002
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_p_distribution(
             distribution_type=self.active_power_distribution_type,
@@ -154,7 +152,6 @@ class OnOffProfiles(OperationProfiles):
             generator=generator,
         )
 
-    @numba.njit
     def _calc_operation_length(
         self,
         *,
@@ -167,8 +164,8 @@ class OnOffProfiles(OperationProfiles):
         time_on: npt.NDArray[np.int64],
         generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
-        step_length = Constants.MINUTES_PER_YEAR // n_steps
-        operation_length = self._sim_distribution(
+        step_length = Constants.MINUTES_PER_YEAR / n_steps
+        operation_length = self._sim_distribution_round(
             distribution_type=distribution_type,
             parameter_1=parameter_1 / step_length,
             parameter_2=parameter_2 / step_length,
@@ -191,13 +188,12 @@ class OnOffProfiles(OperationProfiles):
         operation_length[operation_length <= 0] = 1
         return operation_length
 
-    @numba.njit
     def _calc_time_on_total(
         self,
         *,
         n_steps: int,
         n_units: int,
-        usage_frequency: npt.NDArray[np.int64],
+        usage_frequency: npt.NDArray[np.float64],
         generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
         time_on_weekdays = self._calc_time_on(
@@ -233,14 +229,13 @@ class OnOffProfiles(OperationProfiles):
 
         return time_on
 
-    @numba.njit
     def _calc_time_on(  # noqa: PLR0913
         self,
         *,
         n_steps: int,
         n_units: int,
         n_days: int,
-        usage_frequency: npt.NDArray[np.int64],
+        usage_frequency: npt.NDArray[np.float64],
         parameter_index_start: int,
         parameter_index_end: int,
         day_index_start: int,
@@ -309,7 +304,7 @@ class OnOffProfiles(OperationProfiles):
                 generator=generator,
             )
             idx = prob1_y > prob2
-            time_on = time_on * idx
+            time_on = idx * time_on
             return np.concatenate(
                 [
                     time_on[:, 0 * n_units : 1 * n_units],
@@ -320,7 +315,6 @@ class OnOffProfiles(OperationProfiles):
 
         return np.zeros((n_days, n_units), dtype=np.int64)
 
-    @numba.njit
     def _sim_p_distribution(
         self,
         *,
@@ -332,9 +326,9 @@ class OnOffProfiles(OperationProfiles):
         factor: float = 1,
         clear: bool = True,
         generator: np.random.Generator,
-    ) -> npt.NDArray[np.int64]:
+    ) -> npt.NDArray[np.float64]:
         if distribution_type == "unif" and self.use_probability:
-            p = np.zeros((n_steps, n_units), dtype=np.int64)
+            p = np.zeros((n_steps, n_units), dtype=np.float64)
             prob = self._sim_distribution(
                 distribution_type=distribution_type,
                 parameter_1=0.5,

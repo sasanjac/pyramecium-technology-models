@@ -5,13 +5,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import attrs
-import numba
 import numpy as np
 import numpy.typing as npt
 
 from pstm.dickert.appliances import DistributionType
 from pstm.dickert.on_off_profiles import OnOffProfiles
+
+if TYPE_CHECKING:
+    import datetime as dt
 
 MAX_ITERATIONS = 2**16
 
@@ -28,18 +32,17 @@ class ProcessProfiles(OnOffProfiles):
     operation_2_parameter_1: float
     operation_2_parameter_2: float
 
-    @numba.njit
     def _run(
         self,
         *,
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,
-        lon: float,
-        altitude: float,
-        year: int,
-        tz: str,
+        lat: float,  # noqa: ARG002
+        lon: float,  # noqa: ARG002
+        altitude: float,  # noqa: ARG002
+        year: int,  # noqa: ARG002
+        tz: dt.tzinfo,  # noqa: ARG002
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,
@@ -121,7 +124,7 @@ class ProcessProfiles(OnOffProfiles):
             time_off=time_off_2,
         )
 
-        _, q_1 = self._finalize_power(  # type: ignore[assignment]
+        _, q_1 = self._finalize_power(
             n_units=n_units,
             n_steps=n_steps,
             distribution_type=self.reactive_power_distribution_type,
@@ -135,7 +138,7 @@ class ProcessProfiles(OnOffProfiles):
             q = q_1
         else:
             p = p_1 + p_2
-            _, q_2 = self._finalize_power(  # type: ignore[assignment]
+            _, q_2 = self._finalize_power(
                 n_units=n_units,
                 n_steps=n_steps,
                 distribution_type=self.reactive_power_2_distribution_type,
@@ -146,7 +149,7 @@ class ProcessProfiles(OnOffProfiles):
             )
             q = q_1 + q_2
 
-        p, _ = self._finalize_power(  # type: ignore[assignment]
+        p, _ = self._finalize_power(
             n_units=n_units,
             n_steps=n_steps,
             distribution_type=self.reactive_power_distribution_type,

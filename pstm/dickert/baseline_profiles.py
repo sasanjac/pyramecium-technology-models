@@ -5,8 +5,9 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import attrs
-import numba
 import numpy as np
 import numpy.typing as npt
 
@@ -14,24 +15,26 @@ from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import validate_level
 
+if TYPE_CHECKING:
+    import datetime as dt
+
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class BaselineProfiles(Appliances):
     power_variation: float = attrs.field(validator=validate_level)
     power_variation_max: float
 
-    @numba.njit
     def _run(
         self,
         *,
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,
-        lon: float,
-        altitude: float,
-        year: int,
-        tz: str,
+        lat: float,  # noqa: ARG002
+        lon: float,  # noqa: ARG002
+        altitude: float,  # noqa: ARG002
+        year: int,  # noqa: ARG002
+        tz: dt.tzinfo,  # noqa: ARG002
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p_const = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,

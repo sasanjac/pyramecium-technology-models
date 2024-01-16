@@ -9,7 +9,6 @@ import abc
 import typing as t
 
 import attrs
-import numba
 import numpy as np
 
 if t.TYPE_CHECKING:
@@ -21,6 +20,18 @@ if t.TYPE_CHECKING:
 
 DistributionType = t.Literal["normal", "unif", "lognormal"]
 Phase = t.Literal[0, 1, 2, 3]
+
+
+class Constants:
+    WEEKS_PER_YEAR = 52
+    MINUTES_PER_YEAR = 525_600
+    MINUTES_PER_DAY = 1440
+    DAYS_PER_WEEK = 7
+    MINUTES_PER_HOUR = 60
+    HOURS_PER_DAY = 24
+    DAYS_PER_YEAR = 365
+    WEEKDAYS_PER_YEAR = 261
+    WEEKENDDAYS_PER_YEAR = 104
 
 
 def validate_pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG001
@@ -47,18 +58,6 @@ def validate_level_sequence(
     return tuple(validate_level(instance, attribute, level) for level in value)
 
 
-class Constants:
-    WEEKS_PER_YEAR = 52
-    MINUTES_PER_YEAR = 525_600
-    MINUTES_PER_DAY = 1440
-    DAYS_PER_WEEK = 7
-    MINUTES_PER_HOUR = 60
-    HOURS_PER_DAY = 24
-    DAYS_PER_YEAR = 365
-    WEEKDAYS_PER_YEAR = 261
-    WEEKENDDAYS_PER_YEAR = 104
-
-
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class Appliances:
     description: str
@@ -76,7 +75,6 @@ class Appliances:
     reactive_power_parameter_2: float = attrs.field(validator=validate_level)
     reactive_power_parameter_3: float = attrs.field(validator=validate_level)
 
-    @numba.njit
     def _sim_distribution(
         self,
         *,
@@ -88,7 +86,7 @@ class Appliances:
         n_steps: int = 1,
         factor: float = 1,
         clear: bool = True,
-    ) -> npt.NDArray[np.int64]:
+    ) -> npt.NDArray[np.float64]:
         match distribution_type:
             case "normal":
                 p = generator.normal(
@@ -117,12 +115,35 @@ class Appliances:
         if clear:
             p[p < 0] = 0
 
-        return np.round(p).astype(np.int64)
+        return p
+
+    def _sim_distribution_round(
+        self,
+        *,
+        distribution_type: DistributionType,
+        parameter_1: float,
+        parameter_2: float,
+        generator: np.random.Generator,
+        n_units: int,
+        n_steps: int = 1,
+        factor: float = 1,
+        clear: bool = True,
+    ) -> npt.NDArray[np.int64]:
+        x = self._sim_distribution(
+            distribution_type=distribution_type,
+            parameter_1=parameter_1,
+            parameter_2=parameter_2,
+            generator=generator,
+            n_units=n_units,
+            n_steps=n_steps,
+            factor=factor,
+            clear=clear,
+        )
+        return np.round(x).astype(np.int64)
 
     def _time_as_float(self, time: dt.time) -> float:
         return time.hour / 24 + time.minute / (24 * 60)
 
-    @numba.njit
     def _finalize_active_power(
         self,
         *,
@@ -143,7 +164,6 @@ class Appliances:
         p = p[:n_steps, :]
         return p * active_power
 
-    @numba.njit
     def run(
         self,
         *,
@@ -155,7 +175,7 @@ class Appliances:
         lon: float,
         altitude: float,
         year: int,
-        tz: str,
+        tz: dt.tzinfo,
     ) -> None:
         p, q = self._run(
             n_units=n_units,
@@ -190,7 +210,7 @@ class Appliances:
         lon: float,
         altitude: float,
         year: int,
-        tz: str,
+        tz: dt.tzinfo,
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Internal power calculation method.
 
@@ -201,13 +221,12 @@ class Appliances:
             lon {float} -- longitude of household location
             altitude {float} -- altitude of household location
             year {int} -- year of power profile
-            tz {str} -- timezone of household location
+            tz {dt.tzinfo} -- timezone of household location
 
         Returns:
             tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]] -- active and reactive power
         """
 
-    @numba.njit
     def _finalize_power(
         self,
         *,
@@ -235,7 +254,6 @@ class Appliances:
 
         return (active_power, reactive_power)
 
-    @numba.njit
     def _calc_steps(
         self,
         *,

@@ -11,7 +11,6 @@ import json
 import typing as t
 
 import cattrs
-import numba
 import numpy as np
 import pandas as pd
 
@@ -40,6 +39,8 @@ from pstm.utils import geo
 cattrs.register_structure_hook(dt.datetime, lambda v, _: dt.datetime.fromisoformat(v))
 cattrs.register_structure_hook(dt.date, lambda v, _: dt.date.fromisoformat(v))
 cattrs.register_structure_hook(dt.time, lambda v, _: dt.time.fromisoformat(v))
+
+N_STEPS = 525_600
 
 
 class AppliancesDict(t.TypedDict):
@@ -203,7 +204,6 @@ class Households:
         /,
         *,
         n_units: int,
-        n_steps: int,
         lat: float,
         lon: float,
         altitude: float,
@@ -211,17 +211,17 @@ class Households:
         generator: np.random.Generator,
         baseline_only: bool = False,
     ) -> None:
-        with geo.GeoRef() as georef:
+        with geo.GeoRef(use_clc=False) as georef:
             self.tz = georef.get_time_zone(lat=lat, lon=lon)
 
-        self.n_steps = n_steps
+        self.n_steps = Constants.MINUTES_PER_YEAR
         self.year = year
 
         appliances = self.appliances if not baseline_only else self.baseline_appliances
         for app in appliances:
             app.run(
                 n_units=n_units,
-                n_steps=n_steps,
+                n_steps=self.n_steps,
                 phase_distribution=self.phase_distribution,
                 lat=lat,
                 lon=lon,
@@ -271,11 +271,10 @@ class Households:
 
         return cattrs.structure(data, Households)
 
-    @numba.njit
     def get(self, index: pd.DatetimeIndex) -> Tech:
         p, self.p = (self.p[:, 0, :], self.p[:, 1:, :])
         q, self.q = (self.q[:, 0, :], self.q[:, 1:, :])
-        step_length = Constants.MINUTES_PER_YEAR // self.n_steps
+        step_length = Constants.MINUTES_PER_YEAR / self.n_steps
         _index = dates.date_range(tz=self.tz, year=self.year, freq=dt.timedelta(minutes=step_length))
         dfp = pd.DataFrame(p, index=_index)
         dfq = pd.DataFrame(q, index=_index)

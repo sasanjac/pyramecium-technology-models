@@ -5,8 +5,9 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import attrs
-import numba
 import numpy as np
 import numpy.typing as npt
 from loguru import logger
@@ -17,6 +18,9 @@ from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
 from pstm.dickert.appliances import validate_level
 from pstm.dickert.appliances import validate_pm_level
+
+if TYPE_CHECKING:
+    import datetime as dt
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -37,18 +41,17 @@ class CycleProfiles(OperationProfiles):
     period_parameter_3: float
     period_variation: float = attrs.field(validator=validate_pm_level)
 
-    @numba.njit
     def _run(
         self,
         *,
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,
-        lon: float,
-        altitude: float,
-        year: int,
-        tz: str,
+        lat: float,  # noqa: ARG002
+        lon: float,  # noqa: ARG002
+        altitude: float,  # noqa: ARG002
+        year: int,  # noqa: ARG002
+        tz: dt.tzinfo,  # noqa: ARG002
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         _p = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,
@@ -68,7 +71,7 @@ class CycleProfiles(OperationProfiles):
             period_length=period_length,
             generator=generator,
         )
-        shift = self._sim_distribution(
+        shift = self._sim_distribution_round(
             distribution_type="unif",
             parameter_1=0,
             parameter_2=np.max(period_length[0, :]),
@@ -102,7 +105,6 @@ class CycleProfiles(OperationProfiles):
             generator=generator,
         )
 
-    @numba.njit
     def _calc_period_length(
         self,
         *,
@@ -110,8 +112,8 @@ class CycleProfiles(OperationProfiles):
         n_steps: int,
         generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
-        step_length = Constants.MINUTES_PER_YEAR // n_steps
-        scatter_init = self._sim_distribution(
+        step_length = Constants.MINUTES_PER_YEAR / n_steps
+        scatter_init = self._sim_distribution_round(
             distribution_type=self.period_distribution_type,
             parameter_1=self.period_parameter_1 / step_length,
             parameter_2=self.period_parameter_2 / step_length,
@@ -119,7 +121,7 @@ class CycleProfiles(OperationProfiles):
             generator=generator,
         )
         period_length = np.tile(scatter_init, (np.ceil(n_steps * 1.01 / np.min(scatter_init)).astype(np.int64), 1))
-        scatter_individual = self._sim_distribution(
+        scatter_individual = self._sim_distribution_round(
             distribution_type=self.period_distribution_type,
             parameter_1=0,
             parameter_2=self.period_parameter_3 / step_length,
@@ -144,7 +146,6 @@ class CycleProfiles(OperationProfiles):
         period_length[period_length <= 0] = 1
         return period_length
 
-    @numba.njit
     def _calc_operation_length(
         self,
         *,
@@ -153,8 +154,8 @@ class CycleProfiles(OperationProfiles):
         period_length: npt.NDArray[np.int64],
         generator: np.random.Generator,
     ) -> npt.NDArray[np.int64]:
-        step_length = Constants.MINUTES_PER_YEAR // n_steps
-        scatter_init = self._sim_distribution(
+        step_length = Constants.MINUTES_PER_YEAR / n_steps
+        scatter_init = self._sim_distribution_round(
             distribution_type=self.operation_distribution_type,
             parameter_1=self.operation_parameter_1 / step_length,
             parameter_2=self.operation_parameter_2 / step_length,
@@ -162,7 +163,7 @@ class CycleProfiles(OperationProfiles):
             generator=generator,
         )
         operation_length = np.tile(scatter_init, (period_length.shape[0], 1))
-        scatter_individual = self._sim_distribution(
+        scatter_individual = self._sim_distribution_round(
             distribution_type=self.operation_distribution_type,
             parameter_1=0,
             parameter_2=self.operation_parameter_3 / step_length,
@@ -187,6 +188,5 @@ class CycleProfiles(OperationProfiles):
         operation_length[operation_length <= 0] = 1
         return operation_length
 
-    @numba.njit
     def _find_step_max(self, *, n_steps: int, period_length: npt.NDArray[np.int64], unit: int) -> np.int64:
         return np.argmax(np.cumsum(period_length[:, unit], axis=0) > n_steps)
