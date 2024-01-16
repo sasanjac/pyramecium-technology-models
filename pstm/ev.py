@@ -174,7 +174,10 @@ class EVSystem(Tech):
     def power(self, td: TypeDay) -> np.ndarray:
         rv = np.zeros(24 * 4)
         energy = self.energy(td)
-        csp = int(self.charging_start_point(td) * 4 // 1)
+        csp = 24 * 4 + 1
+        while csp > 24 * 4:
+            csp = int(self.charging_start_point(td) * 4 // 1)
+
         n_full = int((energy * 4) // self.car.charging_power)
         last_power = ((energy * 4) / self.car.charging_power - n_full) * self.car.charging_power
         rv[csp : csp + n_full] = self.car.charging_power
@@ -182,11 +185,11 @@ class EVSystem(Tech):
         return rv
 
     def run(self) -> None:
-        index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15))
+        index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
         type_day_start = int(self.dates.weekday[0])
         tds: list[TypeDay] = ["WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(365)]
         acp = pd.Series(np.concatenate([self.power(td) for td in tds]), index=index, name="p_el")
-        self.acp.high = acp.resample(self.dates.freq).mean()
+        self.acp.loc[:, "high"] = acp.resample(self.dates.freq).mean()
 
 
 CARS = {  # G. Preßmair, “Modellierung und Simulation von Lastprofilen batterieelektrischer Fahrzeuge zur Auslegung von Ladestationen in Wohnhausanlagen,” Mar. 2020.
