@@ -178,7 +178,7 @@ class Household(Tech):
                 order=1,
                 limit_direction="both",
             )
-            self.thr.loc[:, ("high", 1)] = th.to_numpy()
+            self.thr.loc[:, "high"] = th.to_numpy()
 
         if electrical is True:
             active_electrical_demand = self._calculate_active_electrical_demand()
