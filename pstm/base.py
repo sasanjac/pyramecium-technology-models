@@ -55,6 +55,19 @@ class Tech:
             index=self.dates,
         )
 
+    thw: pd.DataFrame = attrs.field(init=False, repr=False)  # Water heating
+
+    @thw.default
+    def _thw_default(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "high": 0,
+                "base": 0,
+                "low": 0,
+            },
+            index=self.dates,
+        )
+
     thl: pd.DataFrame = attrs.field(init=False, repr=False)  # Low temp process heating
 
     @thl.default

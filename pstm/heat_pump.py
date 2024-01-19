@@ -79,7 +79,7 @@ class ResidentialHeatPump(HeatPump):
 class AirHeatPump(ResidentialHeatPump):
     def calc_cop(self, temp_diff: pd.Series) -> pd.Series:
         efficiency_offset = EFFICIENCY_OFFSETS.get(self.efficiency, 0)
-        return 6.08 - 0.09 * temp_diff + 0.005 * temp_diff**2 + efficiency_offset
+        return 6.08 - 0.09 * temp_diff + 0.0005 * temp_diff**2 + efficiency_offset
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)

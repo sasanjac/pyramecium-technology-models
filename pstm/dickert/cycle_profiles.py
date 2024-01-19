@@ -84,7 +84,10 @@ class CycleProfiles(OperationProfiles):
         x, y = np.where(time_on[1:] < time_off[:-1])
         time_off[x, y] = time_on[x + 1, y]
         if np.any((time_on[-1, :]) - n_steps <= 0):
-            logger.warning("Not enough on cycles for cycle operation - adjust safety factor!")
+            logger.warning(
+                "{description}: not enough on cycles for cycle operation - adjust safety factor!",
+                description=self.description,
+            )
 
         p = np.zeros((np.max(time_off[-1, :]).astype(np.int64) + 1, n_units))
 

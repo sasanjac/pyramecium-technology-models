@@ -104,7 +104,7 @@ FACTORS_MAPPING = {
 
 PROFILES_MAPPING_PATHS = {
     house_type: {
-        building_type: SRC_PATH / f"data/household/vdi4655/e_profile_{house_type}_{building_type}_15m.json"
+        building_type: SRC_PATH / f"data/household/vdi4655/e_profile_{house_type}_{building_type}.json"
         for building_type in t.get_args(BUILDING_TYPES)
     }
     for house_type in t.get_args(HOUSE_TYPES)
@@ -122,6 +122,12 @@ PROFILES_MAPPING = {
 
 TYPE_DAYS_PATH = SRC_PATH / "data/household/vdi4655/type_days.json"
 TYPE_DAYS_MAPPING = t.cast("TypeDaysMapping", load_json_from_file(TYPE_DAYS_PATH))
+POWER_CONVERSION_FACTORS = {
+    "OFH": 1_800_000,
+    "MFH": 4_000,
+}  # OFH: x W= y kWh * 60 min/h * 60 s/min / 2 s * 1000 W/kW; MFH: x W = y kWh * 60 min/h / 15 min * 1000 W/kW
+FREQS = {"OFH": 2, "MFH": 900}  # OFH: = 2 s; MFH: = 15 min = 900 s
+PROFILE_SHIFT_LENGTH = 7200  # 8 * 15 min * 60 s
 
 
 class MissingArgumentsError(ValueError):
@@ -144,9 +150,11 @@ class Household(Tech):
     def __attrs_post_init__(self) -> None:
         self.factors = FACTORS_MAPPING[self.house_type][self.building_type]
         self.profiles = PROFILES_MAPPING[self.house_type][self.building_type]
+        self.power_conversion_factor = POWER_CONVERSION_FACTORS[self.house_type]
+        self.freq = FREQS[self.house_type]
         if self.climate_zone is None:
             if self.lat is not None and self.lon is not None:
-                with GeoRef() as georef:
+                with GeoRef(use_clc=False) as georef:
                     self.climate_zone = georef.get_dwd_try_zone(self.lat, self.lon)
             else:
                 zone = "climate"
@@ -154,7 +162,7 @@ class Household(Tech):
 
         if self.tz is None:
             if self.lat is not None and self.lon is not None:
-                with GeoRef() as georef:
+                with GeoRef(use_clc=False) as georef:
                     self.tz = georef.get_time_zone(lat=self.lat, lon=self.lon)
             else:
                 zone = "time"
@@ -163,44 +171,42 @@ class Household(Tech):
         self.type_days = TYPE_DAYS_MAPPING[self.climate_zone]
 
     def run(self, *, thermal: bool = True, electrical: bool = True, random_shift: bool = False) -> None:
-        index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
+        index = dates.date_range(self.tz, freq=dt.timedelta(seconds=self.freq), year=self.dates.year[0])
         if thermal is True:
             water_thermal_demand = self._calculate_water_thermal_demand()
             heating_thermal_demand = self._calculate_heating_thermal_demand()
-            thermal_demand = water_thermal_demand + heating_thermal_demand
             if random_shift is True:
-                thermal_demand = np.roll(thermal_demand, random.randint(-8, 8))
+                water_thermal_demand = np.roll(
+                    water_thermal_demand,
+                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),
+                )
+                heating_thermal_demand = np.roll(
+                    heating_thermal_demand,
+                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),
+                )
 
-            delta = self.dates[0] - index[0]
-            th_raw = pd.Series(data=thermal_demand, index=index + delta)
-            th = pd.Series(data=th_raw, index=self.dates).interpolate(
-                method="spline",
-                order=1,
-                limit_direction="both",
-            )
-            self.thr.loc[:, "high"] = th.to_numpy()
+            self.thw.loc[:, "high"] = self._resample(index, water_thermal_demand)
+            self.thr.loc[:, "high"] = self._resample(index, heating_thermal_demand)
 
         if electrical is True:
             active_electrical_demand = self._calculate_active_electrical_demand()
             if random_shift is True:
                 active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))
 
-            delta = self.dates[0] - index[0]
-            acp_raw = pd.Series(data=active_electrical_demand, index=index + delta)
-            acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
-                method="spline",
-                order=1,
-                limit_direction="both",
-            )
-            self.acp.loc[:, ("high", 1)] = acp.to_numpy()
+            self.acp.loc[:, ("high", 1)] = self._resample(index, active_electrical_demand)
+
             reactive_electrical_demand = self._calculate_reactive_electrical_demand()
-            acq_raw = pd.Series(data=reactive_electrical_demand, index=index)
-            acq = pd.Series(data=acq_raw, index=self.dates).interpolate(
-                method="spline",
-                order=1,
-                limit_direction="both",
-            )
-            self.acq.loc[:, ("high", 1)] = acq.to_numpy()
+            self.acq.loc[:, ("high", 1)] = self._resample(index, reactive_electrical_demand)
+
+    def _resample(self, index: pd.DatetimeIndex, profile: pd.DataFrame) -> npt.NDArray[np.float64]:
+        delta = self.dates[0] - index[0]
+        profile_raw = pd.Series(data=profile, index=index + delta)
+        profile = pd.Series(data=profile_raw, index=self.dates).interpolate(
+            method="spline",
+            order=1,
+            limit_direction="both",
+        )
+        return profile.to_numpy()
 
     def _calculate_water_thermal_demand(self) -> npt.NDArray[np.float64]:
         energy = WATER_DEMAND[self.house_type] * self.n_units
@@ -224,7 +230,7 @@ class Household(Tech):
         energies_daily = {td: energy * (1 / 365 + self.n_units * fac) for td, fac in factors.items()}
         energy_profiles_daily = {td: e * np.array(profiles[td]) for td, e in energies_daily.items()}
         energy_profiles = [energy_profiles_daily[td] for td in self.type_days]
-        return np.concatenate(energy_profiles) * 60 / 15  # kWh = kW * 15 min
+        return np.concatenate(energy_profiles) * self.power_conversion_factor
 
     def _calculate_reactive_electrical_demand(self) -> npt.NDArray[np.float64]:
         acp = self.acp.high[1].to_numpy()

@@ -293,7 +293,10 @@ class OnOffProfiles(OperationProfiles):
 
             prob1_y = prob1 - prob1 * year[:, np.newaxis]
             if np.max(prob1) > 1:
-                logger.warning("Too many on/off cycles - reduce usage frequency or time on parameter 3!")
+                logger.warning(
+                    "{description}: too many on/off cycles - reduce usage frequency or time on parameter 3!",
+                    description=self.description,
+                )
 
             prob2 = self._sim_distribution(
                 distribution_type="unif",
