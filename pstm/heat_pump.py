@@ -33,12 +33,15 @@ class HeatPump(Tech, abc.ABC):
         temp_diff_raw = self.target_temp - temp
         index = dates.date_range(self.tz, freq=dt.timedelta(hours=1), year=self.dates.year[0])
         delta = self.dates[0] - index[0]
-        temp_diff_raw.index = index + delta
-        temp_diff = pd.Series(data=temp_diff_raw, index=self.dates).interpolate(
-            method="spline",
-            order=1,
-            limit_direction="both",
-        )
+        temp_diff_raw.reindex(index=index + delta)
+        if len(self.dates) > len(index):
+            temp_diff = temp_diff_raw.reindex(index=self.dates).interpolate(
+                method="linear",
+                limit_direction="both",
+            )
+        else:
+            temp_diff = temp_diff_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
+
         cop = self.calc_cop(temp_diff)
         if thermal_demand is None:
             self._th.low = (-cop * self.power_inst).to_numpy()

@@ -65,12 +65,15 @@ class Wind(Tech):
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
         delta = self.dates[0] - weather.index[0]
-        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index + delta)
-        acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
-            method="spline",
-            order=1,
-            limit_direction="both",
-        )
+        acp_raw = -self.mc.power_output.reindex(index=weather.index + delta)
+        if len(self.dates) > len(weather.index):
+            acp = acp_raw.reindex(index=self.dates).interpolate(
+                method="linear",
+                limit_direction="both",
+            )
+        else:
+            acp = acp_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
+
         self.acp.loc[:, ("low", 1)] = acp.to_numpy()
         self.acp.loc[:, ("base", 1)] = self.acp.low
         self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))
@@ -102,12 +105,15 @@ class WindFarm(Tech):
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
         delta = self.dates[0] - weather.index[0]
-        acp_raw = pd.Series(data=-self.mc.power_output.to_numpy(), index=weather.index + delta)
-        acp = pd.Series(data=acp_raw, index=self.dates).interpolate(
-            method="spline",
-            order=1,
-            limit_direction="both",
-        )
+        acp_raw = -self.mc.power_output.reindex(index=weather.index + delta)
+        if len(self.dates) > len(weather.index):
+            acp = acp_raw.reindex(index=self.dates).interpolate(
+                method="linear",
+                limit_direction="both",
+            )
+        else:
+            acp = acp_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
+
         self.acp.loc[:, ("low", 1)] = acp.to_numpy()
         self.acp.loc[:, ("base", 1)] = self.acp.low
         self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))

@@ -125,7 +125,7 @@ TYPE_DAYS_MAPPING = t.cast("TypeDaysMapping", load_json_from_file(TYPE_DAYS_PATH
 POWER_CONVERSION_FACTORS = {
     "OFH": 1_800_000,
     "MFH": 4_000,
-}  # OFH: x W= y kWh * 60 min/h * 60 s/min / 2 s * 1000 W/kW; MFH: x W = y kWh * 60 min/h / 15 min * 1000 W/kW
+}  # OFH: x W = y kWh * 60 min/h * 60 s/min / 2 s * 1000 W/kW; MFH: x W = y kWh * 60 min/h / 15 min * 1000 W/kW
 FREQS = {"OFH": 2, "MFH": 900}  # OFH: = 2 s; MFH: = 15 min = 900 s
 PROFILE_SHIFT_LENGTH = 7200  # 8 * 15 min * 60 s
 
@@ -194,40 +194,48 @@ class Household(Tech):
                 active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))
 
             self.acp.loc[:, ("high", 1)] = self._resample(index, active_electrical_demand)
+            self.acq.loc[:, ("high", 1)] = self._calculate_reactive_electrical_demand()
 
-            reactive_electrical_demand = self._calculate_reactive_electrical_demand()
-            self.acq.loc[:, ("high", 1)] = self._resample(index, reactive_electrical_demand)
-
-    def _resample(self, index: pd.DatetimeIndex, profile: pd.DataFrame) -> npt.NDArray[np.float64]:
+    def _resample(self, index: pd.DatetimeIndex, profile: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         delta = self.dates[0] - index[0]
         profile_raw = pd.Series(data=profile, index=index + delta)
-        profile = pd.Series(data=profile_raw, index=self.dates).interpolate(
-            method="spline",
-            order=1,
-            limit_direction="both",
-        )
-        return profile.to_numpy()
+        if len(self.dates) > len(index):
+            profile_df = profile_raw.reindex(index=self.dates).interpolate(
+                method="linear",
+                limit_direction="both",
+            )
+        else:
+            profile_df = profile_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
+
+        return profile_df.to_numpy()
 
     def _calculate_water_thermal_demand(self) -> npt.NDArray[np.float64]:
         energy = WATER_DEMAND[self.house_type] * self.n_units
-        return self._calculate_demand(energy, "water")
+        return self._calculate_demand(energy=energy, profile_type="water", type_factor=self.n_units, offset=1)
 
     def _calculate_heating_thermal_demand(self) -> npt.NDArray[np.float64]:
         energy = self.heat_demand * self.area
-        return self._calculate_demand(energy, "heating")
+        return self._calculate_demand(energy=energy, profile_type="heating", type_factor=1, offset=0)
 
     def _calculate_active_electrical_demand(self) -> npt.NDArray[np.float64]:
         energy = ELECTRICITY_DEMAND[self.house_type][self.n_units] * self.n_units
-        return self._calculate_demand(energy, "electricity")
+        return self._calculate_demand(energy=energy, profile_type="electricity", type_factor=self.n_units, offset=1)
 
-    def _calculate_demand(self, energy: float, profile_type: str) -> npt.NDArray[np.float64]:
+    def _calculate_demand(
+        self,
+        *,
+        energy: float,
+        profile_type: str,
+        type_factor: int,
+        offset: int,
+    ) -> npt.NDArray[np.float64]:
         if self.climate_zone is None:
             raise exceptions.ModelNotRunError
 
         factors = self.factors[f"f_{profile_type}"][self.climate_zone]
         profiles = self.profiles[f"e_{profile_type}"]
 
-        energies_daily = {td: energy * (1 / 365 + self.n_units * fac) for td, fac in factors.items()}
+        energies_daily = {td: energy * (offset / 365 + type_factor * fac) for td, fac in factors.items()}
         energy_profiles_daily = {td: e * np.array(profiles[td]) for td, e in energies_daily.items()}
         energy_profiles = [energy_profiles_daily[td] for td in self.type_days]
         return np.concatenate(energy_profiles) * self.power_conversion_factor
