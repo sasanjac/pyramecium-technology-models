@@ -19,8 +19,12 @@ converter.register_structure_hook(dt.time, lambda v, _: dt.time.fromisoformat(v)
 converter.register_unstructure_hook_factory(
     attrs.has,
     lambda cl: cattrs.gen.make_dict_unstructure_fn(
-        cl,
-        converter,
+        cl=cl,
+        converter=converter,
+        _cattrs_omit_if_default=False,
+        _cattrs_use_linecache=True,
+        _cattrs_use_alias=False,
+        _cattrs_include_init_false=False,
         **{a.name: cattrs.override(omit=True) for a in attrs.fields(cl) if not a.init},
     ),
 )
