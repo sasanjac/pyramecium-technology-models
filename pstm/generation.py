@@ -319,7 +319,13 @@ class Generator:
             dem.name = "p_th"
         elif hh_params is not None:
             hp_class = hh_params.hp_params["hp_type"]
-            hp = hp_class(dates=DF_INDEX, power_inst=0, efficiency=hh_params.hp_params["efficiency"], target_temp=35)
+            hp = hp_class(
+                dates=DF_INDEX,
+                power_inst=0,
+                efficiency=hh_params.hp_params["efficiency"],
+                target_temp=35,
+                tz=weather.tz,
+            )
             cop = hp.calc_cop(weather.temp_air_celsius)
             dem = self.create_thermal_demand(hh_params, georef, weather, cop, p_wp)
         else:
@@ -478,7 +484,10 @@ class Generator:
         power = acp_low * fac
         full_load_hours = power.sum() / power_installed
         if not (FULL_LOAD_HOURS_MIN < full_load_hours < FULL_LOAD_HOURS_MAX):
-            logger.warning("Strange full load hours: {full_load_hours}", full_load_hours=full_load_hours)
+            logger.warning(
+                "Strange full load hours: {full_load_hours}",
+                full_load_hours=full_load_hours,
+            )
         return self.create_df(power=power)  # W in MW
 
     def create_df(self, *, power: npt.NDArray[np.float64] | pd.Series, add_q: bool = True) -> pd.DataFrame:

@@ -31,7 +31,7 @@
   description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
   license = { file = "LICENSE" }
   name = "tech-models"
-  requires-python = ">=3.10,<3.11"
+  requires-python = ">=3.10"
   version = "0.1.0"
 
   [project.urls]
@@ -54,7 +54,6 @@
 
     [tool.pdm.dev-dependencies]
       deployment = ["commitizen"]
-      formatting = ["black"]
       linter     = ["ruff"]
       prototype  = ["ipykernel"]
       test       = ["pytest", "pytest-cov", "pytest-xdist"]
@@ -62,55 +61,54 @@
 
 [tool.ruff]
   extend-exclude = ["tests"]
-  ignore = [
-    "ANN002",
-    "ANN003",
-    "ANN101",
-    "ANN102",
-    "C901",
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105",
-    "D106",
-    "D107",
-    "D202",
-    "D203",
-    "D401",
-    "E402",
-    "E501",
-    "S311",
-  ]
-  line-length = 120
-  select = ["ALL"]
+  line-length    = 120
 
-  [tool.ruff.flake8-type-checking]
-    runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
+  [tool.ruff.lint]
+    ignore = [
+      "ANN002",
+      "ANN003",
+      "ANN101",
+      "ANN102",
+      "C901",
+      "D100",
+      "D101",
+      "D102",
+      "D103",
+      "D104",
+      "D105",
+      "D106",
+      "D107",
+      "D202",
+      "D203",
+      "D401",
+      "E402",
+      "E501",
+      "S311",
+    ]
+    select = ["ALL"]
 
-  [tool.ruff.isort]
-    force-single-line = true
+    [tool.ruff.lint.flake8-type-checking]
+      runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
 
-  [tool.ruff.pydocstyle]
-    convention = "pep257"
+    [tool.ruff.lint.isort]
+      force-single-line = true
 
-  [tool.ruff.pep8-naming]
-    classmethod-decorators = ["classmethod"]
+    [tool.ruff.lint.pydocstyle]
+      convention = "pep257"
 
-  [tool.ruff.pylint]
-    max-args = 10
+    [tool.ruff.lint.pep8-naming]
+      classmethod-decorators = ["classmethod"]
 
-  [tool.ruff.flake8-import-conventions.extend-aliases]
-    "datetime"         = "dt"
-    "geopandas"        = "gpd"
-    "numpy.typing"     = "npt"
-    "rasterio"         = "rio"
-    "shapely.geometry" = "shg"
-    "typing"           = "t"
+    [tool.ruff.lint.pylint]
+      max-args = 10
 
-[tool.black]
-  line_length = 120
+    [tool.ruff.lint.flake8-import-conventions.extend-aliases]
+      "datetime"         = "dt"
+      "geopandas"        = "gpd"
+      "numpy.typing"     = "npt"
+      "rasterio"         = "rio"
+      "shapely.geometry" = "shg"
+      "typing"           = "t"
 
 [tool.commitizen]
   name          = "cz_conventional_commits"

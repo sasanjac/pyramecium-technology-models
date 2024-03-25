@@ -68,12 +68,10 @@ INSULATION_STANDARDS = {
     "PH": (0, 15),
 }
 
-POWER_FACTORS = (
-    [  # Moller et al - Probabilistic household load model for unbalance studies based on measurements - 2016
-        {"a": 0.99, "b": 1.605},  # capacitive
-        {"a": 0.99, "b": 4.904},  # inductive
-    ]
-)
+POWER_FACTORS = [  # Moller et al - Probabilistic household load model for unbalance studies based on measurements - 2016
+    {"a": 0.99, "b": 1.605},  # capacitive
+    {"a": 0.99, "b": 4.904},  # inductive
+]
 
 
 def load_json_from_file(path: pathlib.Path) -> JSONTypes:

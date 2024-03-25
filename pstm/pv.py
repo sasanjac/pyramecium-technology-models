@@ -5,13 +5,16 @@
 from __future__ import annotations
 
 import datetime as dt
+import typing as t
 
 import attrs
 import numpy as np
-import pandas as pd
 import pvlib
 
 from pstm.base import Tech
+
+if t.TYPE_CHECKING:
+    import pandas as pd
 
 GAMMA_TEMP = -0.004
 E0 = 1000
@@ -70,7 +73,7 @@ class PV(Tech):
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
         delta = self.dates[0] - weather.index[0]
-        acp_raw = -self.mc.results.ac.reindex(index=weather.index + delta)
+        acp_raw = -self.mc.results.ac.set_axis(label=weather.index + delta)
         if len(self.dates) > len(weather.index):
             acp = acp_raw.reindex(index=self.dates).interpolate(
                 method="linear",

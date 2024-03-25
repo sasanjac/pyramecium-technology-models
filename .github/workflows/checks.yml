@@ -33,7 +33,7 @@ jobs:
         run: pdm lock --check
 
       - name: Code format checking using black
-        run: pdm run black . --check
+        run: pdm run ruff format --check .
 
       - name: Code checking using ruff
         run: pdm run ruff .

@@ -11,8 +11,9 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from typing import NotRequired
     from typing import TypedDict
+
+    from typing_extensions import NotRequired
 
     class InputData(TypedDict):
         path: pathlib.Path
