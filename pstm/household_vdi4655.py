@@ -82,44 +82,8 @@ def load_json_from_file(path: pathlib.Path) -> JSONTypes:
 HOUSE_TYPES = t.Literal["MFH", "OFH"]
 BUILDING_TYPES = t.Literal["EH", "LEH"]
 
-FACTORS_MAPPING_PATHS = {
-    house_type: {
-        building_type: SRC_PATH / f"data/household/vdi4655/factors_{house_type}_{building_type}.json"
-        for building_type in t.get_args(BUILDING_TYPES)
-    }
-    for house_type in t.get_args(HOUSE_TYPES)
-}
-FACTORS_MAPPING = {
-    house_type: {
-        building_type: t.cast(
-            "FactorsMapping",
-            load_json_from_file(FACTORS_MAPPING_PATHS[house_type][building_type]),
-        )
-        for building_type in t.get_args(BUILDING_TYPES)
-    }
-    for house_type in t.get_args(HOUSE_TYPES)
-}
+DATA_PATH = SRC_PATH / "data/household/vdi4655"
 
-PROFILES_MAPPING_PATHS = {
-    house_type: {
-        building_type: SRC_PATH / f"data/household/vdi4655/e_profile_{house_type}_{building_type}.json"
-        for building_type in t.get_args(BUILDING_TYPES)
-    }
-    for house_type in t.get_args(HOUSE_TYPES)
-}
-PROFILES_MAPPING = {
-    house_type: {
-        building_type: t.cast(
-            "ProfilesMapping",
-            load_json_from_file(PROFILES_MAPPING_PATHS[house_type][building_type]),
-        )
-        for building_type in t.get_args(BUILDING_TYPES)
-    }
-    for house_type in t.get_args(HOUSE_TYPES)
-}
-
-TYPE_DAYS_PATH = SRC_PATH / "data/household/vdi4655/type_days.json"
-TYPE_DAYS_MAPPING = t.cast("TypeDaysMapping", load_json_from_file(TYPE_DAYS_PATH))
 POWER_CONVERSION_FACTORS = {
     "OFH": 1_800_000,
     "MFH": 4_000,
@@ -144,10 +108,12 @@ class Household(Tech):
     lat: float | None = None
     lon: float | None = None
     climate_zone: str | None = None
+    data_path: pathlib.Path = DATA_PATH
 
     def __attrs_post_init__(self) -> None:
-        self.factors = FACTORS_MAPPING[self.house_type][self.building_type]
-        self.profiles = PROFILES_MAPPING[self.house_type][self.building_type]
+        self._init_data()
+        self.factors = self.factors_mapping[self.house_type][self.building_type]
+        self.profiles = self.profiles_mapping[self.house_type][self.building_type]
         self.power_conversion_factor = POWER_CONVERSION_FACTORS[self.house_type]
         self.freq = FREQS[self.house_type]
         if self.climate_zone is None:
@@ -166,7 +132,47 @@ class Household(Tech):
                 zone = "time"
                 raise MissingArgumentsError(zone)
 
-        self.type_days = TYPE_DAYS_MAPPING[self.climate_zone]
+        self.type_days = self.type_days_mapping[self.climate_zone]
+
+    def _init_data(self) -> None:
+        factors_mapping_paths = {
+            house_type: {
+                building_type: self.data_path / f"factors_{house_type}_{building_type}.json"
+                for building_type in t.get_args(BUILDING_TYPES)
+            }
+            for house_type in t.get_args(HOUSE_TYPES)
+        }
+        self.factors_mapping = {
+            house_type: {
+                building_type: t.cast(
+                    "FactorsMapping",
+                    load_json_from_file(factors_mapping_paths[house_type][building_type]),
+                )
+                for building_type in t.get_args(BUILDING_TYPES)
+            }
+            for house_type in t.get_args(HOUSE_TYPES)
+        }
+
+        profiles_mapping_paths = {
+            house_type: {
+                building_type: self.data_path / f"e_profile_{house_type}_{building_type}.json"
+                for building_type in t.get_args(BUILDING_TYPES)
+            }
+            for house_type in t.get_args(HOUSE_TYPES)
+        }
+        self.profiles_mapping = {
+            house_type: {
+                building_type: t.cast(
+                    "ProfilesMapping",
+                    load_json_from_file(profiles_mapping_paths[house_type][building_type]),
+                )
+                for building_type in t.get_args(BUILDING_TYPES)
+            }
+            for house_type in t.get_args(HOUSE_TYPES)
+        }
+
+        type_days_path = self.data_path / "type_days.json"
+        self.type_days_mapping = t.cast("TypeDaysMapping", load_json_from_file(type_days_path))
 
     def run(self, *, thermal: bool = True, electrical: bool = True, random_shift: bool = False) -> None:
         index = dates.date_range(self.tz, freq=dt.timedelta(seconds=self.freq), year=self.dates.year[0])

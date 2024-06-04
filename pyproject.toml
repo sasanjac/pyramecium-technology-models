@@ -30,7 +30,8 @@
   ]
   description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
   license = { file = "LICENSE" }
-  name = "tech-models"
+  name = "pyramecium-technology-models"
+  readme = { file = "README.md", content-type = "text/markdown" }
   requires-python = ">=3.10"
   version = "0.1.0"
 

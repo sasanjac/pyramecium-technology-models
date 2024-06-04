@@ -73,7 +73,7 @@ class PV(Tech):
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
         delta = self.dates[0] - weather.index[0]
-        acp_raw = -self.mc.results.ac.set_axis(label=weather.index + delta)
+        acp_raw = -self.mc.results.ac.set_axis(labels=weather.index + delta)
         if len(self.dates) > len(weather.index):
             acp = acp_raw.reindex(index=self.dates).interpolate(
                 method="linear",
@@ -82,10 +82,12 @@ class PV(Tech):
         else:
             acp = acp_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
 
-        self.acp.loc[:, ("low", 1)] = acp.to_numpy()
-        self.acp.loc[:, ("base", 1)] = self.acp.low
-        self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("high", 1)] = -self.acq.low
+        _acp = acp.to_numpy(dtype=np.float64)
+        self.acp.loc[:, ("low", 1)] = _acp
+        self.acp.loc[:, ("base", 1)] = _acp
+        _acq = _acp * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("low", 1)] = _acq
+        self.acq.loc[:, ("high", 1)] = -_acq
 
     @classmethod
     def from_efficiency_and_area(

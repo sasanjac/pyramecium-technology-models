@@ -237,10 +237,7 @@ $RECYCLE.BIN/
 *.prj
 *.pdf
 
-data/output/
-data/input/
-data/geo/**
-data/weather/**
+data
 
 .sync-exclude.lst
 
