@@ -11,7 +11,6 @@ from typing import Literal
 
 import click
 from loguru import logger
-
 from pstm.utils import dates
 from pstm.utils.geo import GeoRef
 from pstm.utils.weather import WeatherGenerator

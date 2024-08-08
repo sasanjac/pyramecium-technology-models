@@ -9,7 +9,6 @@ import click
 import numpy as np
 import pandas as pd
 from cattrs.preconf.json import make_converter
-
 from pstm.dickert.households import ConfigDict
 from pstm.dickert.households import Households
 
@@ -54,7 +53,7 @@ class NpEncoder(json.JSONEncoder):
 )
 def create(*, input_file: pathlib.Path) -> None:
     for j in range(6):
-        dataframe = pd.read_excel(input_file, sheet_name=f"HH-Typ{j+1}")
+        dataframe = pd.read_excel(input_file, sheet_name=f"HH-Typ{j + 1}")
         starts = np.argwhere(dataframe.iloc[:, [0]] == 1)[:, 0]
         ends = np.argwhere(dataframe.iloc[:, [0]] == -1)[:, 0]
         baseline_profiles = dataframe.iloc[starts[0] : ends[0] + 1].fillna(0)
@@ -347,7 +346,7 @@ def create(*, input_file: pathlib.Path) -> None:
         hh_c = t.cast("ConfigDict", hh)
         hhs = Households.from_config(hh_c)
         hh_c = converter.unstructure(hhs)
-        path = SRC_PATH / f"data/household/dickert/hh{j+1}.json"
+        path = SRC_PATH / f"data/household/dickert/hh{j + 1}.json"
         with path.open(mode="w+", encoding="utf-8") as file_handle:
             json.dump(hh_c, file_handle, cls=NpEncoder)
 

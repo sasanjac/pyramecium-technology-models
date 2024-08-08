@@ -271,7 +271,7 @@ class Generator:
         if q_bat == 0:
             return {}
 
-        eta_bat_in = random.uniform(0.85, 0.95)
+        eta_bat_in = random.uniform(0.85, 0.95)  # noqa: S311
         eta_bat_out = eta_bat_in
         nu_bat = 0.04 / (30 * 24)  # 4 % / month
         return {"bat": {"e_el": q_bat, "eta_in": eta_bat_in, "eta_out": eta_bat_out, "nu": nu_bat}}
@@ -622,10 +622,10 @@ class Generator:
             loc = "urban"
             house_type = "MFH"
         else:
-            loc = random.choice(["rural", "urban"])
-            house_type = random.choice(["OFH", "MFH"])
+            loc = random.choice(["rural", "urban"])  # noqa: S311
+            house_type = random.choice(["OFH", "MFH"])  # noqa: S311
 
-        year: t.Literal[2020, 2030, 2050] = random.choice([2020, 2030, 2050])
+        year: t.Literal[2020, 2030, 2050] = random.choice([2020, 2030, 2050])  # noqa: S311
         return HHParams(
             house_type=house_type,
             hp_params=HP_PARAMS[house_type][loc][year],

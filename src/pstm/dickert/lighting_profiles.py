@@ -407,7 +407,7 @@ class LightingProfiles(Appliances):
             time_off=time_off,
         )
 
-    def _calc_time_on_user(  # noqa: PLR0913
+    def _calc_time_on_user(
         self,
         *,
         n_units: int,
@@ -452,7 +452,7 @@ class LightingProfiles(Appliances):
         time_on_weekday_mid[time_on_weekday_mid < 1] = 1
         return time_on_weekday_mid
 
-    def _calc_time_off_user(  # noqa: PLR0913
+    def _calc_time_off_user(
         self,
         *,
         n_units: int,

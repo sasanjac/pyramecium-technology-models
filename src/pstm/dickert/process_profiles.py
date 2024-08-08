@@ -11,11 +11,12 @@ import attrs
 import numpy as np
 import numpy.typing as npt
 
-from pstm.dickert.appliances import DistributionType
 from pstm.dickert.on_off_profiles import OnOffProfiles
 
 if TYPE_CHECKING:
     import datetime as dt
+
+    from pstm.dickert.appliances import DistributionType
 
 MAX_ITERATIONS = 2**16
 

@@ -182,11 +182,11 @@ class Household(Tech):
             if random_shift is True:
                 water_thermal_demand = np.roll(
                     water_thermal_demand,
-                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),
+                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
                 )
                 heating_thermal_demand = np.roll(
                     heating_thermal_demand,
-                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),
+                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
                 )
 
             self.thw.loc[:, "high"] = self._resample(index, water_thermal_demand)
@@ -195,7 +195,7 @@ class Household(Tech):
         if electrical is True:
             active_electrical_demand = self._calculate_active_electrical_demand()
             if random_shift is True:
-                active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))
+                active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))  # noqa: S311
 
             self.acp.loc[:, ("high", 1)] = self._resample(index, active_electrical_demand)
             self.acq.loc[:, ("high", 1)] = self._calculate_reactive_electrical_demand()
@@ -246,7 +246,7 @@ class Household(Tech):
 
     def _calculate_reactive_electrical_demand(self) -> npt.NDArray[np.float64]:
         acp = self.acp.high[1].to_numpy()
-        sign = random.randint(0, 1)  # capacitive or inductive
+        sign = random.randint(0, 1)  # capacitive or inductive  # noqa: S311
         cosphi = self._cosphi(sign, acp)
         return (sign * 2 - 1) * acp * np.tan(np.arccos(cosphi))
 

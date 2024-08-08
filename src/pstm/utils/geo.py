@@ -145,7 +145,7 @@ class GeoRef:
         clc = self.get_clc(lat=lat, lon=lon)
         min_length = ROUGHNESS_LENGTHS[clc]["rmin"]
         max_length = ROUGHNESS_LENGTHS[clc]["rmax"]
-        return random.uniform(min_length, max_length)
+        return random.uniform(min_length, max_length)  # noqa: S311
 
     def get_clc(self, lat: float, lon: float) -> ValidCLCs:
         return self.get_value_for_coord(self._clc, lat=lat, lon=lon)

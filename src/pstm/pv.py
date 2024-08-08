@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import typing as t
 
 import attrs
@@ -14,6 +13,8 @@ import pvlib
 from pstm.base import Tech
 
 if t.TYPE_CHECKING:
+    import datetime as dt
+
     import pandas as pd
 
 GAMMA_TEMP = -0.004

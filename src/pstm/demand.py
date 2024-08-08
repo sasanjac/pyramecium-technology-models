@@ -3,12 +3,16 @@
 # :license: BSD 3-Clause
 from __future__ import annotations
 
+import typing as t
+
 import attrs
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 
 from pstm.base import Tech
+
+if t.TYPE_CHECKING:
+    import pandas as pd
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)

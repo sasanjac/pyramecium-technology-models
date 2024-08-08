@@ -5,15 +5,16 @@
 
 from __future__ import annotations
 
-import collections.abc as cabc
 import datetime as dt
 import json
 import typing as t
 
+import attrs
 import cattrs
 import numpy as np
 import pandas as pd
 
+from pstm.base import Tech
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
@@ -23,18 +24,14 @@ from pstm.dickert.cycle_profiles import CycleProfiles
 from pstm.dickert.lighting_profiles import LightingProfiles
 from pstm.dickert.on_off_profiles import OnOffProfiles
 from pstm.dickert.process_profiles import ProcessProfiles
+from pstm.utils import dates
+from pstm.utils import geo
 
 if t.TYPE_CHECKING:
+    import collections.abc as cabc
     import pathlib
 
     import numpy.typing as npt
-
-
-import attrs
-
-from pstm.base import Tech
-from pstm.utils import dates
-from pstm.utils import geo
 
 cattrs.register_structure_hook(dt.datetime, lambda v, _: dt.datetime.fromisoformat(v))
 cattrs.register_structure_hook(dt.date, lambda v, _: dt.date.fromisoformat(v))
