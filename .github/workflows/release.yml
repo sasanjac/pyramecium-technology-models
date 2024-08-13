@@ -28,9 +28,20 @@ jobs:
           branch: ${{ github.event.repository.default_branch }}
           enforce_admins: false
 
+      - name: Update license year
+        uses: FantasticFiasco/action-update-license-year@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge license year pull request
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: gh pr merge --squash --delete-branch --admin
+
       - name: Find new version
         id: cz
-        uses: commitizen-tools/commitizen-action@master
+        uses: commitizen-tools/commitizen-action@0.21.0
         with:
           github_token: ${{ secrets.ACCESS_TOKEN }}
           push: false
@@ -38,41 +49,29 @@ jobs:
           changelog: false
 
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.ACCESS_TOKEN }}
           fetch-depth: 0
 
-      - name: Set up PDM @${{ matrix.python-version }}
-        uses: pdm-project/setup-pdm@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: true
-          architecture: x64
-          prerelease: true
-          enable-pep582: true
+      - name: Set up rye
+        uses: eifinger/setup-rye@v4.2.1
+        id: setup-rye
 
-      - name: Installing dependencies
-        run: pdm install
+      - name: Pin python-version @ ${{ env.PYTHON_VERSION }}
+        run: rye pin ${{ env.PYTHON_VERSION }}
 
-      - name: Get current date
-        id: get_date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-
-      - name: Update .zenodo.json date
-        run: echo "`jq '.publication_date="${{ steps.get_date.outputs.date }}"' .zenodo.json`" > .zenodo.json
-
-      - name: Update .zenodo.json url
-        run: echo "`jq '.related_identifiers[0].identifier="https://github.com/ieeh-tu-dresden/tech-models/tree/${{ steps.cz.outputs.version }}"' .zenodo.json`" > .zenodo.json
+      - name: Install dependencies
+        run: rye sync
 
       - name: Bump version and create changelog
-        uses: commitizen-tools/commitizen-action@master
+        uses: commitizen-tools/commitizen-action@0.21.0
         with:
           github_token: ${{ secrets.ACCESS_TOKEN }}
           changelog_increment_filename: body.md
 
       - name: Restore 'include administrators' default branch protection
-        uses: benjefferies/branch-protection-bot@master
+        uses: benjefferies/branch-protection-bot@v1.1.2
         if: always()
         with:
           access_token: ${{ secrets.ACCESS_TOKEN }}
@@ -80,17 +79,13 @@ jobs:
           enforce_admins: ${{ steps.disable_include_admins.outputs.initial_status }}
 
       - name: Build Python packages
-        run: pdm build
+        run: rye build
 
       - name: Publish Python packages
-        run: pdm publish
-        env:
-          PDM_PUBLISH_REPO: pypi
-          PDM_PUBLISH_USERNAME: __token__
-          PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: rye publish --repository pypi --username __token__ --token ${{ secrets.PYPI_TOKEN }} --yes
 
       - name: Create release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           body_path: body.md
           tag_name: ${{ env.REVISION }}

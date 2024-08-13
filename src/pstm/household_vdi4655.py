@@ -32,7 +32,7 @@ if t.TYPE_CHECKING:
     TypeDays = list[str]
     TypeDaysMapping = dict[str, TypeDays]
 
-SRC_PATH = pathlib.Path(__file__).parent.parent
+SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 
 ELECTRICITY_DEMAND_OFH = {
     1: 2350,

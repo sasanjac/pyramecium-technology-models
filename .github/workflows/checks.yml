@@ -12,31 +12,26 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-      - name: Checking out repository
-        uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 1
 
-      - name: Setting up PDM @ ${{ matrix.python-version }}
-        uses: pdm-project/setup-pdm@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: true
-          architecture: x64
-          prerelease: true
-          enable-pep582: true
+      - name: Set up rye
+        uses: eifinger/setup-rye@v4.2.1
+        id: setup-rye
 
-      - name: Installing dependencies
-        run: pdm install
+      - name: Pin python-version @ ${{ matrix.python-version }}
+        run: rye pin ${{ matrix.python-version }}
 
-      - name: Check lockfile
-        run: pdm lock --check
+      - name: Install dependencies
+        run: rye sync
 
-      - name: Code format checking using black
-        run: pdm run ruff format --check .
+      - name: Check code
+        run: rye run ruff check .
 
-      - name: Code checking using ruff
-        run: pdm run ruff .
+      - name: Check code format
+        run: rye run ruff format --check .
 
-      - name: Type checking using mypy
-        run: pdm run mypy .
+      - name: Type check using mypy
+        run: rye run mypy .

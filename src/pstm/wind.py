@@ -14,7 +14,7 @@ import windpowerlib.modelchain as wmc
 
 from pstm.base import Tech
 
-SRC_PATH = pathlib.Path(__file__).parent.parent
+SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 DEFAULT_TURBINE = wpl.WindTurbine(turbine_type="E-126/4200", hub_height=135)
 DEFAULT_POWER_CURVE_WIND = DEFAULT_TURBINE.power_curve["wind_speed"]
 DEFAULT_POWER_CURVE_POWER = DEFAULT_TURBINE.power_curve["value"] / DEFAULT_TURBINE.power_curve["value"].max()
@@ -65,7 +65,7 @@ class Wind(Tech):
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
         delta = self.dates[0] - weather.index[0]
-        acp_raw = -self.mc.power_output.reindex(index=weather.index + delta)
+        acp_raw = -self.mc.power_output.set_axis(labels=weather.index + delta)
         if len(self.dates) > len(weather.index):
             acp = acp_raw.reindex(index=self.dates).interpolate(
                 method="linear",
@@ -74,10 +74,12 @@ class Wind(Tech):
         else:
             acp = acp_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
 
-        self.acp.loc[:, ("low", 1)] = acp.to_numpy()
-        self.acp.loc[:, ("base", 1)] = self.acp.low
-        self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("high", 1)] = -self.acq.low
+        _acp = acp.to_numpy(dtype=np.float64)
+        self.acp.loc[:, ("low", 1)] = _acp
+        self.acp.loc[:, ("base", 1)] = _acp
+        _acq = _acp * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("low", 1)] = _acq
+        self.acq.loc[:, ("high", 1)] = -_acq
 
     @property
     def ac(self) -> pd.Series:
@@ -114,10 +116,12 @@ class WindFarm(Tech):
         else:
             acp = acp_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
 
-        self.acp.loc[:, ("low", 1)] = acp.to_numpy()
-        self.acp.loc[:, ("base", 1)] = self.acp.low
-        self.acq.loc[:, ("low", 1)] = self.acp.low * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("high", 1)] = -self.acq.low
+        _acp = acp.to_numpy(dtype=np.float64)
+        self.acp.loc[:, ("low", 1)] = _acp
+        self.acp.loc[:, ("base", 1)] = _acp
+        _acq = _acp * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("low", 1)] = _acq
+        self.acq.loc[:, ("high", 1)] = -_acq
 
     @property
     def ac(self) -> pd.Series:

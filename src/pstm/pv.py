@@ -13,8 +13,6 @@ import pvlib
 from pstm.base import Tech
 
 if t.TYPE_CHECKING:
-    import datetime as dt
-
     import pandas as pd
 
 GAMMA_TEMP = -0.004
@@ -38,7 +36,6 @@ class PV(Tech):
     lat: float
     lon: float
     alt: float
-    tz: dt.tzinfo
     surface_tilt: int = attrs.field(default=30)
     surface_azimuth: int = attrs.field(default=180)
     gamma_temp: float = attrs.field(default=GAMMA_TEMP)
@@ -58,7 +55,7 @@ class PV(Tech):
         self.loc = pvlib.location.Location(
             latitude=self.lat,
             longitude=self.lon,
-            tz=self.dates.tz,
+            tz=str(self.dates.tz),
             altitude=self.alt,
         )
         self.mc = pvlib.modelchain.ModelChain(
@@ -100,7 +97,6 @@ class PV(Tech):
         lat: float,
         lon: float,
         alt: float,
-        tz: dt.tzinfo,
     ) -> PV:
         power_inst = E0 * efficiency * area
         return cls(
@@ -110,5 +106,4 @@ class PV(Tech):
             lat=lat,
             lon=lon,
             alt=alt,
-            tz=tz,
         )

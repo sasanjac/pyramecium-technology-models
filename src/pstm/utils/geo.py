@@ -29,7 +29,7 @@ if t.TYPE_CHECKING:
 
     T = TypeVar("T")
 
-SRC_PATH = pathlib.Path(__file__).parent.parent.parent
+SRC_PATH = pathlib.Path(__file__).parent.parent.parent.parent
 ALTITUDE_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},{{}}"
 DEFAULT_ALTITUDE_FILE_PATH = SRC_PATH / "data/geo/altitude_germany_20m_epsg25832.tif"
 DEFAULT_CLC_FILE_PATH = SRC_PATH / "data/geo/clc_europe_epsg3035.feather"

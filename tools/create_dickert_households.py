@@ -31,7 +31,7 @@ converter.register_unstructure_hook_factory(
 JSONPrimitive = bool | float | int | str | None
 JSONType = JSONPrimitive | list[JSONPrimitive] | dict[str, JSONPrimitive]
 
-SRC_PATH = pathlib.Path(__file__).parent.parent
+SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 
 
 class NpEncoder(json.JSONEncoder):

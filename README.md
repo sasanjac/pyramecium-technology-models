@@ -6,7 +6,7 @@ A toolbox to create multi-energy power time series for different technologies in
 
 Installation is fairly easy:
 ```sh
-pdm install ieeh-power-system-technology-models
+pip install pyramecium-technology-models
 ```
 
 ## CRS

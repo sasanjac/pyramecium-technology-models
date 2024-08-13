@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import datetime as dt
 import json
 import typing as t
@@ -462,48 +461,30 @@ class NEWA:
         )
 
     @classmethod
-    def from_api(
+    async def download(
         cls,
         lat: float,
         lon: float,
         year: int,
-        tz: dt.tzinfo,
         data_path: pathlib.Path,
-    ) -> NEWA:
+    ) -> pathlib.Path:
         file_path = data_path / NEWA_BASE_FILE_NAME.format(lat=lat, lon=lon, year=year)
         if not file_path.exists():
             url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
-            coro = cls.download(url=url, file_path=file_path)
-            try:
-                loop = asyncio.get_event_loop()
-                task = loop.create_task(coro)
-                task.add_done_callback()
-            except RuntimeError:
-                asyncio.run(coro)
+            chunk_size = 16384
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url) as response,
+            ):
+                if response.status != DOWNLOAD_OK:
+                    msg = f"Error: {response.status}"
+                    raise ValueError(msg)
 
-        return cls.from_nc(file_path, year=year, tz=tz)
-        # with httpx.stream("GET", url, timeout=4*120) as response:
-        #     with file_path.open(mode="wb") as handle:
-        #         handle.write(response.content)  # noqa: ERA001
+                async with aiofiles.open(file_path, mode="wb") as file_handle:
+                    async for data in response.content.iter_chunked(chunk_size):
+                        await file_handle.write(data)
 
-    @classmethod
-    async def download(
-        cls,
-        url: str,
-        file_path: pathlib.Path,
-    ) -> None:
-        chunk_size = 16384
-        async with (
-            aiohttp.ClientSession() as session,
-            session.get(url) as response,
-        ):
-            if response.status != DOWNLOAD_OK:
-                msg = f"Error: {response.status}"
-                raise ValueError(msg)
-
-            async with aiofiles.open(file_path, mode="wb") as file_handle:
-                async for data in response.content.iter_chunked(chunk_size):
-                    await file_handle.write(data)
+        return file_path
 
     @classmethod
     def from_nc(cls, file_path: pathlib.Path, tz: dt.tzinfo) -> NEWA:

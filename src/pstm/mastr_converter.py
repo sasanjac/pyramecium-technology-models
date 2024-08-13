@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         n_files: NotRequired[int]
 
 
-SRC_PATH = pathlib.Path(__file__).parent.parent
+SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 CATALOG_PATH = pathlib.Path(SRC_PATH / "data/mastr/Katalogwerte.xml")
 DEFAULT_COLUMNS = [
     "Postleitzahl",
