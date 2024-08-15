@@ -24,11 +24,8 @@ from pstm.utils.roughness_lengths import ValidCLCs
 if t.TYPE_CHECKING:
     import datetime as dt
     from types import TracebackType
-    from typing import TypeVar
 
-    import typing_extensions as te
-
-    T = TypeVar("T")
+    T = t.TypeVar("T")
 
 SRC_PATH = pathlib.Path(__file__).parent.parent.parent.parent
 ALTITUDE_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},{{}}"
@@ -48,7 +45,7 @@ DEFAULT_ZIP_CODES_FILE_PATH = SRC_PATH / "data/geo/zip_codes_germany_epsg4326.fe
 async def get_altitude_from_api(lat: float, lon: float) -> float:
     async with (
         aiohttp.ClientSession() as session,
-        session.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=5) as response,
+        session.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=aiohttp.ClientTimeout(total=5)) as response,
     ):
         json_body = await response.json()
         return json_body["results"][0]["altitude"]
@@ -158,7 +155,7 @@ class GeoRef:
     def get_time_zone(self, lat: float, lon: float) -> dt.tzinfo:
         return self.get_value_for_coord(self._time_zones, lat=lat, lon=lon)
 
-    def __enter__(self) -> te.Self:
+    def __enter__(self) -> t.Self:
         self._init_zip_codes_file()
         self._init_altitude_file()
         self._init_dwd_try_zones_file()

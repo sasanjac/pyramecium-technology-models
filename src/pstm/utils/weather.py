@@ -490,7 +490,7 @@ class NEWA:
     def from_nc(cls, file_path: pathlib.Path, tz: dt.tzinfo) -> NEWA:
         data = netCDF4.Dataset(file_path)
         np_index = np.datetime64(
-            dt.datetime(1989, 1, 1, 0, 0, 0, tzinfo=tz).astimezone(dt.timezone.utc).replace(tzinfo=None),
+            dt.datetime(1989, 1, 1, 0, 0, 0, tzinfo=tz).astimezone(dt.UTC).replace(tzinfo=None),
         ) + data.variables["time"][:].astype(
             "timedelta64[m]",
         )

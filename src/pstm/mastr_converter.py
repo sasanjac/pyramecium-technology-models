@@ -4,23 +4,20 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING
+import typing as t
 
 import attrs
 import numpy as np
 import pandas as pd
 
-if TYPE_CHECKING:
-    from typing import TypedDict
+if t.TYPE_CHECKING:
 
-    from typing_extensions import NotRequired
-
-    class InputData(TypedDict):
+    class InputData(t.TypedDict):
         path: pathlib.Path
         export_path: pathlib.Path
-        columns_extra: NotRequired[list[str]]
-        conds_extra: NotRequired[list[tuple[str, ...]]]
-        n_files: NotRequired[int]
+        columns_extra: t.NotRequired[list[str]]
+        conds_extra: t.NotRequired[list[tuple[str, ...]]]
+        n_files: t.NotRequired[int]
 
 
 SRC_PATH = pathlib.Path(__file__).parent.parent.parent
