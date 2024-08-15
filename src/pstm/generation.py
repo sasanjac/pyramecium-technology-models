@@ -294,7 +294,6 @@ class Generator:
             lat=lat,
             lon=lon,
             alt=alt,
-            tz=weather.tz,
             dates=DF_INDEX,
         )
         pv_weather = weather.weather_at_pv_module

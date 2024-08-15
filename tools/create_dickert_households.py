@@ -9,6 +9,7 @@ import click
 import numpy as np
 import pandas as pd
 from cattrs.preconf.json import make_converter
+
 from pstm.dickert.households import ConfigDict
 from pstm.dickert.households import Households
 

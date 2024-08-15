@@ -63,6 +63,9 @@
     "pytest-xdist>=3.6.1",
     "pytest>=8.3.1",
     "ruff>=0.5.5",
+    "types-PyYAML>=6.0.12.20240808",
+    "types-aiofiles>=24.1.0.20240626",
+    "types-pytz>=2024.1.0.20240417",
   ]
   managed = true
 
@@ -133,8 +136,6 @@
   tag_format = "$version"
   version = "0.1.0"
   version_files = [
-    ".zenodo.json:version",
-    "CITATION.cff:cff-version",
     "pyproject.toml:version",
     "src/pstm/__version__.py:VERSION",
   ]
@@ -144,7 +145,6 @@
   ignore_missing_imports = true
   mypy_path              = "src/pstm"
   namespace_packages     = true
-  plugins                = "pydantic.mypy"
   strict_optional        = true
   warn_no_return         = true
   warn_redundant_casts   = true

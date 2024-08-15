@@ -431,7 +431,7 @@ class NEWA:
         dataframe.reset_index().to_feather(file_path)
 
     @classmethod
-    def from_feather(cls, file_path: pathlib.Path) -> None:
+    def from_feather(cls, file_path: pathlib.Path) -> NEWA:
         dataframe = pd.read_feather(file_path)
         return cls(
             index=dataframe.index,

@@ -7,14 +7,13 @@ from __future__ import annotations
 import pathlib
 import random
 import typing as t
-from typing import Literal
 
+import aiohttp
 import attrs
 import geopandas as gpd
 import numpy as np
 import pyproj
 import rasterio as rio
-import requests
 import shapely.geometry as shg
 from loguru import logger
 from scipy.spatial import distance
@@ -27,6 +26,8 @@ if t.TYPE_CHECKING:
     from types import TracebackType
     from typing import TypeVar
 
+    import typing_extensions as te
+
     T = TypeVar("T")
 
 SRC_PATH = pathlib.Path(__file__).parent.parent.parent.parent
@@ -34,7 +35,7 @@ ALTITUDE_SERVICE_URL = "https://api.opentopodata.org/v1/eudem25m?locations={{}},
 DEFAULT_ALTITUDE_FILE_PATH = SRC_PATH / "data/geo/altitude_germany_20m_epsg25832.tif"
 DEFAULT_CLC_FILE_PATH = SRC_PATH / "data/geo/clc_europe_epsg3035.feather"
 DEFAULT_DWD_TRY_FILES_PATH = SRC_PATH / "data/weather/weather"
-DEFAULT_DWD_TRY_SCENARIO: Literal["mittel", "sommerwarm", "winterkalt"] = "mittel"
+DEFAULT_DWD_TRY_SCENARIO: t.Literal["mittel", "sommerwarm", "winterkalt"] = "mittel"
 DEFAULT_DWD_TRY_YEAR = 2045
 DEFAULT_DWD_TRY_ZONES_FILE_PATH = SRC_PATH / "data/geo/dwd_try_zones_epsg4326.feather"
 DEFAULT_NEWA_FILES_PATH = SRC_PATH / "data/weather/weather"
@@ -44,9 +45,13 @@ DEFAULT_WEATHER_GEN_FILES_PATH = SRC_PATH / "data/weather/weather"
 DEFAULT_ZIP_CODES_FILE_PATH = SRC_PATH / "data/geo/zip_codes_germany_epsg4326.feather"
 
 
-def get_altitude_from_api(lat: float, lon: float) -> float:
-    result = requests.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=5)
-    return result.json()["results"][0]["altitude"]
+async def get_altitude_from_api(lat: float, lon: float) -> float:
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=5) as response,
+    ):
+        json_body = await response.json()
+        return json_body["results"][0]["altitude"]
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -56,7 +61,7 @@ class GeoRef:
     clc_file_path: pathlib.Path = DEFAULT_CLC_FILE_PATH
     dwd_try_zones_file_path: pathlib.Path = DEFAULT_DWD_TRY_ZONES_FILE_PATH
     dwd_try_year: int = DEFAULT_DWD_TRY_YEAR
-    dwd_try_scenario: Literal["mittel", "sommerwarm", "winterkalt"] = DEFAULT_DWD_TRY_SCENARIO
+    dwd_try_scenario: t.Literal["mittel", "sommerwarm", "winterkalt"] = DEFAULT_DWD_TRY_SCENARIO
     dwd_try_files_path: pathlib.Path = DEFAULT_DWD_TRY_FILES_PATH
     weather_gen_files_path: pathlib.Path = DEFAULT_WEATHER_GEN_FILES_PATH
     newa_files_path: pathlib.Path = DEFAULT_NEWA_FILES_PATH
@@ -153,7 +158,7 @@ class GeoRef:
     def get_time_zone(self, lat: float, lon: float) -> dt.tzinfo:
         return self.get_value_for_coord(self._time_zones, lat=lat, lon=lon)
 
-    def __enter__(self) -> t.Self:
+    def __enter__(self) -> te.Self:
         self._init_zip_codes_file()
         self._init_altitude_file()
         self._init_dwd_try_zones_file()
