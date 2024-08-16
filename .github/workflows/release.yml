@@ -1,0 +1,96 @@
+name: release
+
+on: workflow_dispatch
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+  release:
+    name: Release a new version
+    runs-on: ubuntu-latest
+    needs: [tests]
+    env:
+      PYTHON_VERSION: "3.11"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.7
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      - name: Temporarily disable 'include administrators' default branch protection
+        uses: benjefferies/branch-protection-bot@v1.1.2
+        if: always()
+        with:
+          access_token: ${{ secrets.ACCESS_TOKEN }}
+          branch: ${{ github.event.repository.default_branch }}
+          enforce_admins: false
+
+      - name: Update license year
+        uses: FantasticFiasco/action-update-license-year@v3.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge license year pull request
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: gh pr merge --squash --delete-branch --admin
+
+      - name: Find new version
+        id: cz
+        uses: commitizen-tools/commitizen-action@0.21.0
+        with:
+          github_token: ${{ secrets.ACCESS_TOKEN }}
+          push: false
+          commit: false
+          changelog: false
+
+      - name: Check out repository
+        uses: actions/checkout@v4.1.7
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up rye
+        uses: eifinger/setup-rye@v4.2.2
+        id: setup-rye
+
+      - name: Pin python-version @ ${{ env.PYTHON_VERSION }}
+        run: rye pin ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: rye sync
+
+      - name: Bump version and create changelog
+        uses: commitizen-tools/commitizen-action@0.21.0
+        with:
+          github_token: ${{ secrets.ACCESS_TOKEN }}
+          changelog_increment_filename: body.md
+
+      - name: Restore 'include administrators' default branch protection
+        uses: benjefferies/branch-protection-bot@v1.1.2
+        if: always()
+        with:
+          access_token: ${{ secrets.ACCESS_TOKEN }}
+          branch: ${{ github.event.repository.default_branch }}
+          enforce_admins: ${{ steps.disable_include_admins.outputs.initial_status }}
+
+      - name: Build Python packages
+        run: rye build
+
+      - name: Publish Python packages
+        run: rye publish --repository pypi --username __token__ --token ${{ secrets.PYPI_TOKEN }} --yes
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2.0.8
+        with:
+          body_path: body.md
+          tag_name: ${{ env.REVISION }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            LICENSE
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

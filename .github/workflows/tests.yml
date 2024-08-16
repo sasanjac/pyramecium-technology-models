@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_call:
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    needs: [checks]
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.7
+        with:
+          fetch-depth: 1
+
+      - name: Set up rye
+        uses: eifinger/setup-rye@v4.2.1
+        id: setup-rye
+
+      - name: Pin python-version @ ${{ matrix.python-version }}
+        run: rye pin ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: rye sync
+
+      - name: Unit test using pytest
+        run: rye test
