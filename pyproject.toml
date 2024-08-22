@@ -54,7 +54,7 @@
   build-backend = "hatchling.build"
   requires      = ["hatchling"]
 
-[tool.rye]
+[tool.uv]
   dev-dependencies = [
     "commitizen>=3.28.0",
     "ipykernel>=6.29.5",
@@ -67,7 +67,6 @@
     "types-aiofiles>=24.1.0.20240626",
     "types-pytz>=2024.1.0.20240417",
   ]
-  managed = true
 
 [tool.hatch.metadata]
   allow-direct-references = true
@@ -111,7 +110,7 @@
       convention = "pep257"
 
     [tool.ruff.lint.pep8-naming]
-      classmethod-decorators = ["classmethod", "pydantic.field_validator"]
+      classmethod-decorators = ["classmethod"]
 
     [tool.ruff.lint.pylint]
       max-args = 10
