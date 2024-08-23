@@ -245,5 +245,3 @@ config_generation.yml
 *.ipynb
 out/
 .vscode
-.python-version
-*.lock
