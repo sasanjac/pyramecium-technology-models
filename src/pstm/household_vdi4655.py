@@ -189,29 +189,25 @@ class Household(Tech):
                     random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
                 )
 
-            self.thw.loc[:, "high"] = self._resample(index, water_thermal_demand)
-            self.thr.loc[:, "high"] = self._resample(index, heating_thermal_demand)
+            self.thw.loc[:, "high"] = self._resample_as_array(
+                target=pd.Series(data=water_thermal_demand),
+                index=index,
+            )
+            self.thr.loc[:, "high"] = self._resample_as_array(
+                target=pd.Series(data=heating_thermal_demand),
+                index=index,
+            )
 
         if electrical is True:
             active_electrical_demand = self._calculate_active_electrical_demand()
             if random_shift is True:
                 active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))  # noqa: S311
 
-            self.acp.loc[:, ("high", 1)] = self._resample(index, active_electrical_demand)
-            self.acq.loc[:, ("high", 1)] = self._calculate_reactive_electrical_demand()
-
-    def _resample(self, index: pd.DatetimeIndex, profile: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-        delta = self.dates[0] - index[0]
-        profile_raw = pd.Series(data=profile, index=index + delta)
-        if len(self.dates) > len(index):
-            profile_df = profile_raw.reindex(index=self.dates).interpolate(
-                method="linear",
-                limit_direction="both",
+            self.acp.loc[:, ("high", 1)] = self._resample_as_array(
+                target=pd.Series(data=active_electrical_demand),
+                index=index,
             )
-        else:
-            profile_df = profile_raw.resample(self.dates.freq).mean().reindex(index=self.dates)
-
-        return profile_df.to_numpy()
+            self.acq.loc[:, ("high", 1)] = self._calculate_reactive_electrical_demand()
 
     def _calculate_water_thermal_demand(self) -> npt.NDArray[np.float64]:
         energy = WATER_DEMAND[self.house_type] * self.n_units
@@ -245,7 +241,7 @@ class Household(Tech):
         return np.concatenate(energy_profiles) * self.power_conversion_factor
 
     def _calculate_reactive_electrical_demand(self) -> npt.NDArray[np.float64]:
-        acp = self.acp.high[1].to_numpy()
+        acp = self.acp.high[1].to_numpy(dtype=np.float64)
         sign = random.randint(0, 1)  # capacitive or inductive  # noqa: S311
         cosphi = self._cosphi(sign, acp)
         return (sign * 2 - 1) * acp * np.tan(np.arccos(cosphi))
