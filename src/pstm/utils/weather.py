@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import tempfile
 import typing as t
 import zoneinfo
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ import netCDF4
 import numpy as np
 import pandas as pd
 import pyproj
+import requests
 
 from pstm.utils import dates
 
@@ -34,6 +36,7 @@ NEWA_BASE_FILE_NAME = "NEWA_WEATHER_{lat}-{lon}_{year}.nc"
 NEWA_BASE_URL = "https://wps.neweuropeanwindatlas.eu/api/mesoscale-ts/v1/get-data-point?latitude={lat}&longitude={lon}&height=50&height=75&height=100&height=150&height=200&height=250&height=500&variable=HGT&variable=LU_INDEX&variable=LANDMASK&variable=ZNT&variable=T2&variable=WS&variable=T&variable=PD&dt_start={year}-01-01T00:00:00&dt_stop={year2}-01-01T00:00:00"
 R_SPEC_AIR = 287.0500676
 DOWNLOAD_OK = 200
+CHUNK_SIZE = 16384
 
 
 @dataclass
@@ -96,6 +99,7 @@ class WeatherGenerator:
             "tz": str(self.tz),
             "lat": self.lat,
             "lon": self.lon,
+            "alt": self.alt,
             "rl": self.roughness_length,
             "freq": str(self.freq.seconds),
             "year": self.year,
@@ -461,6 +465,24 @@ class NEWA:
         )
 
     @classmethod
+    def from_api(
+        cls,
+        lat: float,
+        lon: float,
+        year: int,
+        tz: dt.tzinfo,
+    ) -> NEWA:
+        url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
+        response = requests.get(url, timeout=600)
+        with tempfile.NamedTemporaryFile(delete_on_close=False) as buf:
+            for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                if chunk:
+                    buf.write(chunk)
+
+            buf.close()
+            return cls.from_nc(file_path=buf.name, tz=tz)
+
+    @classmethod
     async def download(
         cls,
         lat: float,
@@ -471,7 +493,6 @@ class NEWA:
         file_path = data_path / NEWA_BASE_FILE_NAME.format(lat=lat, lon=lon, year=year)
         if not file_path.exists():
             url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
-            chunk_size = 16384
             async with (
                 aiohttp.ClientSession() as session,
                 session.get(url) as response,
@@ -481,21 +502,21 @@ class NEWA:
                     raise ValueError(msg)
 
                 async with aiofiles.open(file_path, mode="wb") as file_handle:
-                    async for data in response.content.iter_chunked(chunk_size):
+                    async for data in response.content.iter_chunked(CHUNK_SIZE):
                         await file_handle.write(data)
 
         return file_path
 
     @classmethod
-    def from_nc(cls, file_path: pathlib.Path, tz: dt.tzinfo) -> NEWA:
-        data = netCDF4.Dataset(file_path)
+    def from_nc(cls, file_path: pathlib.Path | str, tz: dt.tzinfo) -> NEWA:
+        data = netCDF4.Dataset(file_path, mode="r")
         np_index = np.datetime64(
             dt.datetime(1989, 1, 1, 0, 0, 0, tzinfo=tz).astimezone(dt.UTC).replace(tzinfo=None),
         ) + data.variables["time"][:].astype(
             "timedelta64[m]",
         )
         index = pd.DatetimeIndex(np_index).tz_localize("utc").tz_convert(tz)
-        return cls(
+        newa = cls(
             index=index,
             roughness_length=data.variables["ZNT"][:].data,
             wind_speed_50=data.variables["WS"][:, 0].data,
@@ -521,6 +542,8 @@ class NEWA:
             temperature_250=data.variables["T"][:, 5].data,
             temperature_500=data.variables["T"][:, 6].data,
         )
+        data.close()
+        return newa
 
     @staticmethod
     def pressure(

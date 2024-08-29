@@ -7,6 +7,7 @@ from __future__ import annotations
 import pathlib
 import random
 import typing as t
+import zoneinfo
 
 import aiohttp
 import attrs
@@ -153,7 +154,8 @@ class GeoRef:
         return self.get_value_for_coord(self._clc, lat=lat, lon=lon)
 
     def get_time_zone(self, lat: float, lon: float) -> dt.tzinfo:
-        return self.get_value_for_coord(self._time_zones, lat=lat, lon=lon)
+        tz_str: str = self.get_value_for_coord(self._time_zones, lat=lat, lon=lon)
+        return zoneinfo.ZoneInfo(tz_str)
 
     def __enter__(self) -> t.Self:
         self._init_zip_codes_file()
