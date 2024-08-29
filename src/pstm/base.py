@@ -4,9 +4,14 @@
 
 from __future__ import annotations
 
+import typing as t
+
 import attrs
 import numpy as np
 import pandas as pd
+
+if t.TYPE_CHECKING:
+    import numpy.typing as npt
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -17,7 +22,7 @@ class Tech:
     @acp.default
     def _acp_default(self) -> pd.DataFrame:
         return pd.DataFrame(
-            data=np.zeros((len(self.dates), 3)),
+            data=np.zeros((len(self.dates), 3), dtype=np.float64),
             columns=pd.MultiIndex.from_arrays(
                 [
                     ["high", "base", "low"],
@@ -32,7 +37,7 @@ class Tech:
     @acq.default
     def _acq_default(self) -> pd.DataFrame:
         return pd.DataFrame(
-            data=np.zeros((len(self.dates), 3)),
+            data=np.zeros((len(self.dates), 3), dtype=np.float64),
             columns=pd.MultiIndex.from_arrays(
                 [
                     ["high", "base", "low"],
@@ -48,9 +53,9 @@ class Tech:
     def _thr_default(self) -> pd.DataFrame:
         return pd.DataFrame(
             {
-                "high": 0,
-                "base": 0,
-                "low": 0,
+                "high": np.zeros(len(self.dates), dtype=np.float64),
+                "base": np.zeros(len(self.dates), dtype=np.float64),
+                "low": np.zeros(len(self.dates), dtype=np.float64),
             },
             index=self.dates,
         )
@@ -61,9 +66,9 @@ class Tech:
     def _thw_default(self) -> pd.DataFrame:
         return pd.DataFrame(
             {
-                "high": 0,
-                "base": 0,
-                "low": 0,
+                "high": np.zeros(len(self.dates), dtype=np.float64),
+                "base": np.zeros(len(self.dates), dtype=np.float64),
+                "low": np.zeros(len(self.dates), dtype=np.float64),
             },
             index=self.dates,
         )
@@ -74,9 +79,9 @@ class Tech:
     def _thl_default(self) -> pd.DataFrame:
         return pd.DataFrame(
             {
-                "high": 0,
-                "base": 0,
-                "low": 0,
+                "high": np.zeros(len(self.dates), dtype=np.float64),
+                "base": np.zeros(len(self.dates), dtype=np.float64),
+                "low": np.zeros(len(self.dates), dtype=np.float64),
             },
             index=self.dates,
         )
@@ -87,9 +92,9 @@ class Tech:
     def _thh_default(self) -> pd.DataFrame:
         return pd.DataFrame(
             {
-                "high": 0,
-                "base": 0,
-                "low": 0,
+                "high": np.zeros(len(self.dates), dtype=np.float64),
+                "base": np.zeros(len(self.dates), dtype=np.float64),
+                "low": np.zeros(len(self.dates), dtype=np.float64),
             },
             index=self.dates,
         )
@@ -100,9 +105,9 @@ class Tech:
     def _ch4_default(self) -> pd.DataFrame:
         return pd.DataFrame(
             {
-                "high": 0,
-                "base": 0,
-                "low": 0,
+                "high": np.zeros(len(self.dates), dtype=np.float64),
+                "base": np.zeros(len(self.dates), dtype=np.float64),
+                "low": np.zeros(len(self.dates), dtype=np.float64),
             },
             index=self.dates,
         )
@@ -113,9 +118,9 @@ class Tech:
     def _h2_default(self) -> pd.DataFrame:
         return pd.DataFrame(
             {
-                "high": 0,
-                "base": 0,
-                "low": 0,
+                "high": np.zeros(len(self.dates), dtype=np.float64),
+                "base": np.zeros(len(self.dates), dtype=np.float64),
+                "low": np.zeros(len(self.dates), dtype=np.float64),
             },
             index=self.dates,
         )
@@ -126,9 +131,23 @@ class Tech:
     def _col_default(self) -> pd.DataFrame:
         return pd.DataFrame(
             {
-                "high": 0,
-                "base": 0,
-                "low": 0,
+                "high": np.zeros(len(self.dates), dtype=np.float64),
+                "base": np.zeros(len(self.dates), dtype=np.float64),
+                "low": np.zeros(len(self.dates), dtype=np.float64),
             },
             index=self.dates,
         )
+
+    def _resample(self, target: pd.Series, index: pd.DatetimeIndex) -> pd.Series:
+        delta = self.dates[0] - index[0]
+        target = target.set_axis(labels=index + delta)
+        if len(self.dates) > len(index):
+            return target.reindex(index=self.dates).interpolate(
+                method="linear",
+                limit_direction="both",
+            )
+
+        return target.resample(self.dates.freq).mean().reindex(index=self.dates)
+
+    def _resample_as_array(self, target: pd.Series, index: pd.DatetimeIndex) -> npt.NDArray[np.float64]:
+        return self._resample(target, index).to_numpy(dtype=np.float64)
