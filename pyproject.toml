@@ -29,8 +29,9 @@
     "requests>=2.32.3",
     "scipy>=1.14.0",
     "shapely>=2.0.5",
+    "tqdm>=4.66.5",
     "windpowerlib>=0.2.2",
-  ]
+]
   description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
   license = { file = "LICENSE" }
   name = "pyramecium-technology-models"
