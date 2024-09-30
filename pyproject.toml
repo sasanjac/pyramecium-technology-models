@@ -31,7 +31,7 @@
     "shapely>=2.0.5",
     "tqdm>=4.66.5",
     "windpowerlib>=0.2.2",
-]
+  ]
   description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
   license = { file = "LICENSE" }
   name = "pyramecium-technology-models"
@@ -69,7 +69,7 @@
     "types-aiofiles>=24.1.0.20240626",
     "types-pytz>=2024.1.0.20240417",
     "types-requests>=2.32.0.20240712",
-]
+  ]
 
 [tool.hatch.metadata]
   allow-direct-references = true
@@ -78,6 +78,7 @@
   packages = ["src/pstm"]
 
 [tool.ruff]
+  exclude     = ["*.ipynb"]
   line-length = 120
 
   [tool.ruff.lint]
@@ -118,6 +119,9 @@
     [tool.ruff.lint.pylint]
       max-args = 10
 
+    [tool.ruff.lint.per-file-ignores]
+      "tests/*" = ["ANN001", "ANN201", "INP001", "S101"]
+
     [tool.ruff.lint.flake8-import-conventions.extend-aliases]
       "collections.abc"  = "cabc"
       "datetime"         = "dt"
@@ -126,12 +130,6 @@
       "rasterio"         = "rio"
       "shapely.geometry" = "shg"
       "typing"           = "t"
-
-[tool.ruff.lint.per-file-ignores]
-  "tests/*" = ["ANN001", "ANN201", "INP001", "S101"]
-
-[tool.black]
-  line-length = 120
 
 [tool.commitizen]
   name = "cz_conventional_commits"
@@ -168,4 +166,5 @@
   output = "coverage.xml"
 
 [tool.pyright]
-  exclude = ["**/__pycache__"]
+  exclude          = ["**/__pycache__"]
+  typeCheckingMode = "off"
