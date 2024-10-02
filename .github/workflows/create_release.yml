@@ -1,78 +1,82 @@
 ---
-name: Create release
+  name: Create release
 
-on: workflow_dispatch
+  on: workflow_dispatch
 
-jobs:
-  test_code:
-    name: test code
-    uses: ./.github/workflows/test_code.yml
+  jobs:
+    test_code:
+      name: test code
+      uses: ./.github/workflows/test_code.yml
 
-  create_release:
-    name: Create release
-    runs-on: ubuntu-latest
-    env:
-      PYTHON_VERSION: "3.12"
+    create_release:
+      name: Create release
+      runs-on: ubuntu-latest
+      needs: [test_code]
+      env:
+        PYTHON_VERSION: "3.11"
 
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4.2.0
+      steps:
+        - name: Get bypass token
+          id: get_bypass_token
+          uses: peter-murray/workflow-application-token-action@v3.0.0
+          with:
+            application_id: ${{ secrets.WORKFLOW_ASSISTANT_APP_ID }}
+            application_private_key: ${{ secrets.WORKFLOW_ASSISTANT_PRIVATE_KEY }}
+            organization: ${{ github.repository_owner }}
 
-      - name: Temporarily disable 'include administrators' default branch protection
-        uses: benjefferies/branch-protection-bot@v1.1.2
-        if: always()
-        with:
-          access_token: ${{ secrets.ACCESS_TOKEN }}
-          branch: ${{ github.event.repository.default_branch }}
-          enforce_admins: false
+        - name: Check out repository
+          uses: actions/checkout@v4.2.0
+          with:
+            fetch-depth: 0
+            token: ${{ steps.get_bypass_token.outputs.token }}
 
-      - name: Update license year
-        uses: FantasticFiasco/action-update-license-year@v3.0.2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        - name: Update license year
+          uses: FantasticFiasco/action-update-license-year@v3.0.2
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Merge license year pull request
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr merge --squash --delete-branch --admin
+        - name: Merge license year pull request
+          continue-on-error: true
+          env:
+            GITHUB_TOKEN: ${{ steps.get_bypass_token.outputs.token }}
 
-      - name: Bump version and create changelog
-        uses: commitizen-tools/commitizen-action@0.21.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          changelog_increment_filename: body.md
+          run: gh pr merge --squash --delete-branch --admin
 
-      - name: Restore 'include administrators' default branch protection
-        uses: benjefferies/branch-protection-bot@v1.1.2
-        if: always()
-        with:
-          access_token: ${{ secrets.ACCESS_TOKEN }}
-          owner: ${{ github.event.repository.owner }}
-          repo: ${{ github.event.repository.name }}
-          branch: ${{ github.event.repository.default_branch }}
+        - name: Bump version and create changelog
+          id: commitizen
+          uses: commitizen-tools/commitizen-action@0.21.0
+          with:
+            github_token: ${{ steps.get_bypass_token.outputs.token }}
+            changelog_increment_filename: body.md
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3.1.2
-        with:
-          enable-cache: true
+        - name: Install uv
+          uses: astral-sh/setup-uv@v3.1.3
+          with:
+            enable-cache: true
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        run: uv python install ${{ env.PYTHON_VERSION }}
+        - name: Set up Python ${{ env.PYTHON_VERSION }}
+          run: uv python install ${{ env.PYTHON_VERSION }}
 
-      - name: Install the project
-        run: uv sync --dev
+        - name: Install the project
+          run: uv sync --all-extras --dev
 
-      - name: Build python package
-        run: uv build
+        - name: Build python package
+          run: uv build
 
-      - name: Create github release
-        uses: softprops/action-gh-release@v2.0.8
-        with:
-          body_path: body.md
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
-            LICENSE
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        - name: Publish python packages
+          run: uvx twine upload dist/*
+          env:
+            UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+            UV_PUBLISH_URL: pypi.tesvolt.com
+
+        - name: Create github release
+          uses: softprops/action-gh-release@v2.0.8
+          with:
+            body_path: body.md
+            tag_name: ${{ steps.commitizen.outputs.version }}
+            files: |
+              dist/*.whl
+              dist/*.tar.gz
+              LICENSE
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
