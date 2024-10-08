@@ -41,6 +41,11 @@
 
           run: gh pr merge --squash --delete-branch --admin
 
+        - name: Check out repository
+          uses: actions/checkout@v4.2.0
+          with:
+            token: ${{ steps.get_bypass_token.outputs.token }}
+
         - name: Bump version and create changelog
           id: commitizen
           uses: commitizen-tools/commitizen-action@0.21.0
