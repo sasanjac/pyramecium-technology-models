@@ -85,7 +85,7 @@ class LightingProfiles(Appliances):
         location = pvlib.location.Location(
             latitude=lat,
             longitude=lon,
-            tz=tz,
+            tz=str(tz),
             altitude=altitude,
         )
         times = dates.date_range(tz=tz, freq=dt.timedelta(days=1), year=year)

@@ -26,15 +26,17 @@
     "pytz>=2024.1",
     "pyyaml>=6.0.2",
     "rasterio>=1.3.10",
+    "requests>=2.32.3",
     "scipy>=1.14.0",
     "shapely>=2.0.5",
+    "tqdm>=4.66.5",
     "windpowerlib>=0.2.2",
   ]
   description = "A toolbox to create multi-energy power time series for different technologies in steady-state simulations of energy systems."
   license = { file = "LICENSE" }
   name = "pyramecium-technology-models"
   readme = { file = "README.md", content-type = "text/markdown" }
-  requires-python = ">=3.11"
+  requires-python = ">=3.12"
   version = "1.0.0"
 
   [project.urls]
@@ -66,6 +68,7 @@
     "types-PyYAML>=6.0.12.20240808",
     "types-aiofiles>=24.1.0.20240626",
     "types-pytz>=2024.1.0.20240417",
+    "types-requests>=2.32.0.20240712",
   ]
 
 [tool.hatch.metadata]
@@ -75,6 +78,7 @@
   packages = ["src/pstm"]
 
 [tool.ruff]
+  exclude     = ["*.ipynb"]
   line-length = 120
 
   [tool.ruff.lint]
@@ -115,6 +119,9 @@
     [tool.ruff.lint.pylint]
       max-args = 10
 
+    [tool.ruff.lint.per-file-ignores]
+      "tests/*" = ["ANN001", "ANN201", "INP001", "S101"]
+
     [tool.ruff.lint.flake8-import-conventions.extend-aliases]
       "collections.abc"  = "cabc"
       "datetime"         = "dt"
@@ -123,12 +130,6 @@
       "rasterio"         = "rio"
       "shapely.geometry" = "shg"
       "typing"           = "t"
-
-[tool.ruff.lint.per-file-ignores]
-  "tests/*" = ["ANN001", "ANN201", "INP001", "S101"]
-
-[tool.black]
-  line-length = 120
 
 [tool.commitizen]
   name = "cz_conventional_commits"
@@ -140,14 +141,15 @@
   ]
 
 [tool.mypy]
-  follow_imports         = "normal"
-  ignore_missing_imports = true
-  mypy_path              = "src/pstm"
-  namespace_packages     = true
-  strict_optional        = true
-  warn_no_return         = true
-  warn_redundant_casts   = true
-  warn_unused_ignores    = true
+  enable_incomplete_feature = "NewGenericSyntax"
+  follow_imports            = "normal"
+  ignore_missing_imports    = true
+  mypy_path                 = "src/pstm"
+  namespace_packages        = true
+  strict_optional           = true
+  warn_no_return            = true
+  warn_redundant_casts      = true
+  warn_unused_ignores       = true
 
 [tool.pytest.ini_options]
   python_files = "test_*.py"
@@ -165,4 +167,5 @@
   output = "coverage.xml"
 
 [tool.pyright]
-  exclude = ["**/__pycache__"]
+  exclude          = ["**/__pycache__"]
+  typeCheckingMode = "off"
