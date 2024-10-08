@@ -68,7 +68,7 @@
           run: uv build
 
         - name: Publish python packages
-          run: uvx twine upload dist/*
+          run: uv publish
           env:
             UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
