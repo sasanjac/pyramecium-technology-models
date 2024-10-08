@@ -1,55 +1,55 @@
 ---
-name: Test code
+  name: Test code
 
-on:
-  push:
-    branches:
-      - main
+  on:
+    push:
+      branches:
+        - main
 
-  pull_request:
-    branches:
-      - main
+    pull_request:
+      branches:
+        - main
 
-  workflow_call:
+    workflow_call:
 
-jobs:
-  check_code:
-    name: Check code
-    uses: ./.github/workflows/check_code.yml
+  jobs:
+    check_code:
+      name: Check code
+      uses: ./.github/workflows/check_code.yml
 
-  test_code:
-    name: Test code
-    runs-on: ubuntu-latest
-    needs: [check_code]
-    strategy:
-      matrix:
-        python-version: ["3.12"]
+    test_code:
+      name: Test code
+      runs-on: ubuntu-latest
+      needs: [check_code]
+      strategy:
+        matrix:
+          python-version: ["3.12"]
 
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4.2.0
+      steps:
+        - name: Check out repository
+          uses: actions/checkout@v4.2.0
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3.1.2
-        with:
-          enable-cache: true
+        - name: Install uv
+          uses: astral-sh/setup-uv@v3.1.4
+          with:
+            enable-cache: true
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+        - name: Set up Python ${{ matrix.python-version }}
+          run: uv python install ${{ matrix.python-version }}
 
-      - name: Install the project
-        run: uv sync --dev
+        - name: Install the project
+          run: uv sync --all-extras --dev
 
-      - name: Unit test using pytest
-        run: uv run pytest
+        - name: Unit test using pytest
+          run: uv run pytest
 
-  success:
-    name: Test code passed
-    runs-on: ubuntu-latest
-    needs: [test_code]
-    if: always()
-    steps:
-      - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1.2
-        with:
-          jobs: ${{ toJSON(needs) }}
+    success:
+      name: Test code passed
+      runs-on: ubuntu-latest
+      needs: [test_code]
+      if: always()
+      steps:
+        - name: Decide whether the needed jobs succeeded or failed
+          uses: re-actors/alls-green@release/v1.2
+          with:
+            jobs: ${{ toJSON(needs) }}
