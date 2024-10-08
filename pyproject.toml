@@ -141,14 +141,15 @@
   ]
 
 [tool.mypy]
-  follow_imports         = "normal"
-  ignore_missing_imports = true
-  mypy_path              = "src/pstm"
-  namespace_packages     = true
-  strict_optional        = true
-  warn_no_return         = true
-  warn_redundant_casts   = true
-  warn_unused_ignores    = true
+  enable_incomplete_feature = "NewGenericSyntax"
+  follow_imports            = "normal"
+  ignore_missing_imports    = true
+  mypy_path                 = "src/pstm"
+  namespace_packages        = true
+  strict_optional           = true
+  warn_no_return            = true
+  warn_redundant_casts      = true
+  warn_unused_ignores       = true
 
 [tool.pytest.ini_options]
   python_files = "test_*.py"
