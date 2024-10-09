@@ -52,23 +52,26 @@ async def get_altitude_from_api(lat: float, lon: float) -> float:
         return json_body["results"][0]["altitude"]
 
 
-@attrs.define(auto_attribs=True, kw_only=True, slots=False)
+@attrs.define(auto_attribs=True, kw_only=True, slots=False, unsafe_hash=True)
 class GeoRef:
-    zip_codes_file_path: pathlib.Path = DEFAULT_ZIP_CODES_FILE_PATH
-    altitude_file_path: pathlib.Path = DEFAULT_ALTITUDE_FILE_PATH
-    clc_file_path: pathlib.Path = DEFAULT_CLC_FILE_PATH
-    dwd_try_zones_file_path: pathlib.Path = DEFAULT_DWD_TRY_ZONES_FILE_PATH
-    dwd_try_year: int = DEFAULT_DWD_TRY_YEAR
-    dwd_try_scenario: t.Literal["mittel", "sommerwarm", "winterkalt"] = DEFAULT_DWD_TRY_SCENARIO
-    dwd_try_files_path: pathlib.Path = DEFAULT_DWD_TRY_FILES_PATH
-    weather_gen_files_path: pathlib.Path = DEFAULT_WEATHER_GEN_FILES_PATH
-    newa_files_path: pathlib.Path = DEFAULT_NEWA_FILES_PATH
-    newa_year: int = DEFAULT_NEWA_YEAR
-    time_zones_file_path: pathlib.Path = DEFAULT_TIME_ZONES_FILE_PATH
-    reference_epsg: int = 4326
-    use_raw_dwd_try_files: bool = False
-    use_clc: bool = True
-    voronoi_file_path: pathlib.Path | None = None
+    zip_codes_file_path: pathlib.Path = attrs.field(default=DEFAULT_ZIP_CODES_FILE_PATH, hash=True)
+    altitude_file_path: pathlib.Path = attrs.field(default=DEFAULT_ALTITUDE_FILE_PATH, hash=True)
+    clc_file_path: pathlib.Path = attrs.field(default=DEFAULT_CLC_FILE_PATH, hash=True)
+    dwd_try_zones_file_path: pathlib.Path = attrs.field(default=DEFAULT_DWD_TRY_ZONES_FILE_PATH, hash=True)
+    dwd_try_year: int = attrs.field(default=DEFAULT_DWD_TRY_YEAR, hash=True)
+    dwd_try_scenario: t.Literal["mittel", "sommerwarm", "winterkalt"] = attrs.field(
+        default=DEFAULT_DWD_TRY_SCENARIO,
+        hash=True,
+    )
+    dwd_try_files_path: pathlib.Path = attrs.field(default=DEFAULT_DWD_TRY_FILES_PATH, hash=True)
+    weather_gen_files_path: pathlib.Path = attrs.field(default=DEFAULT_WEATHER_GEN_FILES_PATH, hash=True)
+    newa_files_path: pathlib.Path = attrs.field(default=DEFAULT_NEWA_FILES_PATH, hash=True)
+    newa_year: int = attrs.field(default=DEFAULT_NEWA_YEAR, hash=True)
+    time_zones_file_path: pathlib.Path = attrs.field(default=DEFAULT_TIME_ZONES_FILE_PATH, hash=True)
+    reference_epsg: int = attrs.field(default=4326, hash=True)
+    use_raw_dwd_try_files: bool = attrs.field(default=False, hash=True)
+    use_clc: bool = attrs.field(default=True, hash=True)
+    voronoi_file_path: pathlib.Path | None = attrs.field(default=None, hash=True)
 
     def get_zip_code(self, lat: float, lon: float) -> int:
         return self.get_value_for_coord(self._zip_codes, lat=lat, lon=lon)
