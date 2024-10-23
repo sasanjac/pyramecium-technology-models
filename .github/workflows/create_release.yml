@@ -24,7 +24,7 @@
             application_private_key: ${{ secrets.WORKFLOW_ASSISTANT_PRIVATE_KEY }}
 
         - name: Check out repository
-          uses: actions/checkout@v4.2.1
+          uses: actions/checkout@v4.2.2
           with:
             fetch-depth: 0
             token: ${{ steps.get_bypass_token.outputs.token }}
@@ -42,7 +42,7 @@
           run: gh pr merge --squash --delete-branch --admin
 
         - name: Check out repository
-          uses: actions/checkout@v4.2.1
+          uses: actions/checkout@v4.2.2
           with:
             token: ${{ steps.get_bypass_token.outputs.token }}
 
