@@ -48,7 +48,7 @@
 
         - name: Bump version and create changelog
           id: commitizen
-          uses: commitizen-tools/commitizen-action@0.22.0
+          uses: commitizen-tools/commitizen-action@0.23.0
           with:
             github_token: ${{ steps.get_bypass_token.outputs.token }}
             changelog_increment_filename: body.md
