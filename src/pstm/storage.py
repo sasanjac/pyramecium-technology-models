@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import enum
-from typing import Literal
 
 import attrs
 import numpy as np
