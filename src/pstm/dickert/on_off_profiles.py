@@ -270,9 +270,10 @@ class OnOffProfiles(OperationProfiles):
                         clear=False,
                         generator=generator,
                     )
-                    time_on[:, n_units * i : n_units * (i + 1)] = np.tile(
+                    j = i - parameter_index_start
+                    time_on[:, n_units * j : n_units * (j + 1)] = np.tile(
                         idx[:, np.newaxis] + prob,
-                        (1, time_on[:, n_units * i : n_units * (i + 1)].shape[1]),
+                        (1, time_on[:, n_units * j : n_units * (j + 1)].shape[1]),
                     )
 
             steps = np.linspace(1, n_days, n_days, dtype=np.int64)
