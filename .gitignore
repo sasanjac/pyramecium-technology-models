@@ -243,3 +243,5 @@ data
 .sync-exclude.lst
 
 !examples/simple_german.ipynb
+
+src/pstm/generation.py

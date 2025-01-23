@@ -29,7 +29,7 @@ if t.TYPE_CHECKING:
 
     from pstm.utils.geo import GeoRef
 
-    type Array = npt.NDArray[np.float64]
+    Array = npt.NDArray[np.float64]
 
 
 NEWA_BASE_FILE_NAME = "NEWA_WEATHER_{lat}-{lon}_{year}.nc"
