@@ -1,3 +1,11 @@
+## 1.0.3 (2025-01-23)
+
+### Fix
+
+- proper version
+- token permission in release CI (#50)
+- weekends in Dickert load profiles (#47)
+
 ## 1.0.2 (2024-10-09)
 
 ### Fix
