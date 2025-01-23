@@ -14,11 +14,19 @@
       needs: [test-code]
 
       steps:
+        - name: Get bypass token
+          id: get_bypass_token
+          uses: peter-murray/workflow-application-token-action@v4.0.0
+          with:
+            application_id: ${{ secrets.WORKFLOW_ASSISTANT_APP_ID }}
+            application_private_key: ${{ secrets.WORKFLOW_ASSISTANT_PRIVATE_KEY }}
+            revoke_token: true
+
         - name: Check out repository
           uses: actions/checkout@v4.2.2
           with:
             fetch-depth: 0
-            token: ${{ secrets.GITHUB_TOKEN }}
+            token: ${{ steps.get_bypass_token.outputs.token }}
 
         - name: Update license year
           uses: FantasticFiasco/action-update-license-year@v3.0.2
@@ -29,7 +37,7 @@
         - name: Merge license year pull request
           continue-on-error: true
           env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_TOKEN: ${{ steps.get_bypass_token.outputs.token }}
 
           run: gh pr merge --squash --delete-branch --admin
 
@@ -37,13 +45,13 @@
           uses: actions/checkout@v4.2.2
           with:
             fetch-depth: 0
-            token: ${{ secrets.GITHUB_TOKEN }}
+            token: ${{ steps.get_bypass_token.outputs.token }}
 
         - name: Bump version and create changelog
           id: commitizen
           uses: commitizen-tools/commitizen-action@0.23.1
           with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
+            github_token: ${{ steps.get_bypass_token.outputs.token }}
             changelog_increment_filename: body.md
 
         - name: Install uv
