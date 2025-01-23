@@ -1,6 +1,4 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
 import datetime as dt
 import json
@@ -43,11 +41,14 @@ class NpEncoder(json.JSONEncoder):
     def default(self, obj: JSONType | np.integer | np.floating | np.ndarray) -> JSONType:
         if isinstance(obj, np.integer):
             return int(obj)
+
         if isinstance(obj, np.floating):
             return float(obj)
+
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        return super().default(obj)
+
+        return super().default(obj)  # type:ignore[no-any-return]
 
 
 @click.command()
@@ -56,7 +57,7 @@ class NpEncoder(json.JSONEncoder):
     type=click.Path(exists=True, path_type=pathlib.Path),
     help="Path to the input file.",
 )
-def create(*, input_file: pathlib.Path) -> None:
+def create(*, input_file: pathlib.Path) -> None:  # noqa: PLR0914
     for j in range(6):
         dataframe = pd.read_excel(input_file, sheet_name=f"HH-Typ{j + 1}")
         starts = np.argwhere(dataframe.iloc[:, [0]] == 1)[:, 0]
@@ -64,53 +65,53 @@ def create(*, input_file: pathlib.Path) -> None:
         baseline_profiles = dataframe.iloc[starts[0] : ends[0] + 1].fillna(0)
         baseline_profiles_dc = [
             {
-                "description": row.iloc[[1]].to_numpy()[0],
-                "phase": int(row.iloc[[2]].to_numpy()[0]),
-                "switch_on_current": row.iloc[[3]].to_numpy()[0],
-                "switch_on_time": row.iloc[[4]].to_numpy()[0],
-                "equipment_level": row.iloc[[5]].to_numpy()[0],
-                "active_power_distribution_type": row.iloc[[6]].to_numpy()[0],
-                "active_power_parameter_1": row.iloc[[7]].to_numpy()[0],
-                "active_power_parameter_2": row.iloc[[8]].to_numpy()[0],
-                "active_power_parameter_3": row.iloc[[9]].to_numpy()[0],
-                "reactive_power_share": row.iloc[[10]].to_numpy()[0],
-                "reactive_power_distribution_type": row.iloc[[11]].to_numpy()[0],
-                "reactive_power_parameter_1": row.iloc[[12]].to_numpy()[0],
-                "reactive_power_parameter_2": row.iloc[[13]].to_numpy()[0],
-                "reactive_power_parameter_3": row.iloc[[14]].to_numpy()[0],
-                "power_variation": row.iloc[[15]].to_numpy()[0],
-                "power_variation_max": row.iloc[[16]].to_numpy()[0],
+                "description": row.iloc[1].to_numpy()[0],
+                "phase": int(row.iloc[2].to_numpy()[0]),
+                "switch_on_current": row.iloc[3].to_numpy()[0],
+                "switch_on_time": row.iloc[4].to_numpy()[0],
+                "equipment_level": row.iloc[5].to_numpy()[0],
+                "active_power_distribution_type": row.iloc[6].to_numpy()[0],
+                "active_power_parameter_1": row.iloc[7].to_numpy()[0],
+                "active_power_parameter_2": row.iloc[8].to_numpy()[0],
+                "active_power_parameter_3": row.iloc[9].to_numpy()[0],
+                "reactive_power_share": row.iloc[10].to_numpy()[0],
+                "reactive_power_distribution_type": row.iloc[11].to_numpy()[0],
+                "reactive_power_parameter_1": row.iloc[12].to_numpy()[0],
+                "reactive_power_parameter_2": row.iloc[13].to_numpy()[0],
+                "reactive_power_parameter_3": row.iloc[14].to_numpy()[0],
+                "power_variation": row.iloc[15].to_numpy()[0],
+                "power_variation_max": row.iloc[16].to_numpy()[0],
             }
             for _, row in baseline_profiles.iterrows()
         ]
         cycle_profiles = dataframe.iloc[starts[1] : ends[1] + 1].fillna(0)
         cycle_profiles_dc = [
             {
-                "description": row.iloc[[1]].to_numpy()[0],
-                "phase": int(row.iloc[[2]].to_numpy()[0]),
-                "switch_on_current": row.iloc[[3]].to_numpy()[0],
-                "switch_on_time": row.iloc[[4]].to_numpy()[0],
-                "equipment_level": row.iloc[[5]].to_numpy()[0],
-                "active_power_distribution_type": row.iloc[[6]].to_numpy()[0],
-                "active_power_parameter_1": row.iloc[[7]].to_numpy()[0],
-                "active_power_parameter_2": row.iloc[[8]].to_numpy()[0],
-                "active_power_parameter_3": row.iloc[[9]].to_numpy()[0],
-                "active_power_parameter_4": row.iloc[[10]].to_numpy()[0],
-                "reactive_power_share": row.iloc[[11]].to_numpy()[0],
-                "reactive_power_distribution_type": row.iloc[[12]].to_numpy()[0],
-                "reactive_power_parameter_1": row.iloc[[13]].to_numpy()[0],
-                "reactive_power_parameter_2": row.iloc[[14]].to_numpy()[0],
-                "reactive_power_parameter_3": row.iloc[[15]].to_numpy()[0],
-                "period_distribution_type": row.iloc[[16]].to_numpy()[0],
-                "period_parameter_1": row.iloc[[17]].to_numpy()[0],
-                "period_parameter_2": row.iloc[[18]].to_numpy()[0],
-                "period_parameter_3": row.iloc[[19]].to_numpy()[0],
-                "operation_distribution_type": row.iloc[[20]].to_numpy()[0],
-                "operation_parameter_1": row.iloc[[21]].to_numpy()[0],
-                "operation_parameter_2": row.iloc[[22]].to_numpy()[0],
-                "operation_parameter_3": row.iloc[[23]].to_numpy()[0],
-                "period_variation": row.iloc[[24]].to_numpy()[0],
-                "operation_variation": row.iloc[[25]].to_numpy()[0],
+                "description": row.iloc[1].to_numpy()[0],
+                "phase": int(row.iloc[2].to_numpy()[0]),
+                "switch_on_current": row.iloc[3].to_numpy()[0],
+                "switch_on_time": row.iloc[4].to_numpy()[0],
+                "equipment_level": row.iloc[5].to_numpy()[0],
+                "active_power_distribution_type": row.iloc[6].to_numpy()[0],
+                "active_power_parameter_1": row.iloc[7].to_numpy()[0],
+                "active_power_parameter_2": row.iloc[8].to_numpy()[0],
+                "active_power_parameter_3": row.iloc[9].to_numpy()[0],
+                "active_power_parameter_4": row.iloc[10].to_numpy()[0],
+                "reactive_power_share": row.iloc[11].to_numpy()[0],
+                "reactive_power_distribution_type": row.iloc[12].to_numpy()[0],
+                "reactive_power_parameter_1": row.iloc[13].to_numpy()[0],
+                "reactive_power_parameter_2": row.iloc[14].to_numpy()[0],
+                "reactive_power_parameter_3": row.iloc[15].to_numpy()[0],
+                "period_distribution_type": row.iloc[16].to_numpy()[0],
+                "period_parameter_1": row.iloc[17].to_numpy()[0],
+                "period_parameter_2": row.iloc[18].to_numpy()[0],
+                "period_parameter_3": row.iloc[19].to_numpy()[0],
+                "operation_distribution_type": row.iloc[20].to_numpy()[0],
+                "operation_parameter_1": row.iloc[21].to_numpy()[0],
+                "operation_parameter_2": row.iloc[22].to_numpy()[0],
+                "operation_parameter_3": row.iloc[23].to_numpy()[0],
+                "period_variation": row.iloc[24].to_numpy()[0],
+                "operation_variation": row.iloc[25].to_numpy()[0],
             }
             for _, row in cycle_profiles.iterrows()
         ]
@@ -156,20 +157,20 @@ def create(*, input_file: pathlib.Path) -> None:
                 "probability_3": on_off_profiles.iloc[i * 4 + 1, [9]].fillna(0).to_numpy()[0],
                 "probability_4": on_off_profiles.iloc[i * 4 + 1, [10]].fillna(0).to_numpy()[0],
                 "time_on_parameters_1": (
-                    on_off_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_on_parameters_2": (
-                    on_off_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],
-                    on_off_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_on_parameters_3": (
                     on_off_profiles.iloc[i * 4 + 3, [25]].fillna(0).to_numpy()[0],
@@ -224,20 +225,20 @@ def create(*, input_file: pathlib.Path) -> None:
                 "probability_3": process_profiles.iloc[i * 4 + 1, [9]].fillna(0).to_numpy()[0],
                 "probability_4": process_profiles.iloc[i * 4 + 1, [10]].fillna(0).to_numpy()[0],
                 "time_on_parameters_1": (
-                    process_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_on_parameters_2": (
-                    process_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],
-                    process_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_on_parameters_3": (
                     process_profiles.iloc[i * 4 + 3, [25]].fillna(0).to_numpy()[0],
@@ -288,12 +289,12 @@ def create(*, input_file: pathlib.Path) -> None:
                     lighting_profiles.iloc[i * 9 + 1, [12]].fillna(0).to_numpy()[0],
                 ),
                 "lighting_parameters_1": (
-                    lighting_profiles.iloc[i * 9, [13]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 1, [13]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9, [13]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 1, [13]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "lighting_parameters_2": (
-                    lighting_profiles.iloc[i * 9, [14]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 1, [14]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9, [14]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 1, [14]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_on_distribution_types": (
                     lighting_profiles.iloc[i * 9, [17]].fillna("normal").to_numpy()[0],
@@ -302,16 +303,16 @@ def create(*, input_file: pathlib.Path) -> None:
                     lighting_profiles.iloc[i * 9, [20]].fillna("normal").to_numpy()[0],
                 ),
                 "time_on_parameters_1": (
-                    lighting_profiles.iloc[i * 9 + 1, [17]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 1, [18]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 1, [19]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 1, [20]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 1, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 1, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 1, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 1, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_on_parameters_2": (
-                    lighting_profiles.iloc[i * 9 + 2, [17]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 2, [18]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 2, [19]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 2, [20]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 2, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 2, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 2, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 2, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_off_distribution_types": (
                     lighting_profiles.iloc[i * 9 + 4, [17]].fillna("normal").to_numpy()[0],
@@ -320,16 +321,16 @@ def create(*, input_file: pathlib.Path) -> None:
                     lighting_profiles.iloc[i * 9 + 4, [20]].fillna("normal").to_numpy()[0],
                 ),
                 "time_off_parameters_1": (
-                    lighting_profiles.iloc[i * 9 + 5, [17]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 5, [18]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 5, [19]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 5, [20]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 5, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 5, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 5, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 5, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_off_parameters_2": (
-                    lighting_profiles.iloc[i * 9 + 6, [17]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 6, [18]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 6, [19]].fillna(dt.time(0)).to_numpy()[0],
-                    lighting_profiles.iloc[i * 9 + 6, [20]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 6, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 6, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 6, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 6, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
                 ),
                 "time_on_variations": (
                     lighting_profiles.iloc[i * 9 + 7, [17]].fillna(0).to_numpy()[0],

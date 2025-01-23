@@ -1,7 +1,5 @@
-# :author: Jörg Dickert <joerg.dickert@tu-dresden.de>
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2015-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
@@ -92,14 +90,14 @@ class LightingProfiles(Appliances):
         s = location.get_sun_rise_set_transit(times, method="spa")
         sunrise = s.sunrise.apply(lambda x: x.hour * 60 + x.minute).to_numpy()
         sunset = s.sunset.apply(lambda x: x.hour * 60 + x.minute).to_numpy()
-        _p_const = self._sim_distribution(
+        p_const = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
             n_units=n_units,
             generator=generator,
         )
-        _p_wd_morning = self._calc_wd_morning(
+        p_wd_morning = self._calc_wd_morning(
             n_units=n_units,
             n_steps=n_steps,
             n_days=Constants.WEEKDAYS_PER_YEAR,
@@ -108,7 +106,7 @@ class LightingProfiles(Appliances):
             sunrise=sunrise,
             generator=generator,
         )
-        _p_wd_evening = self._calc_wd_evening(
+        p_wd_evening = self._calc_wd_evening(
             n_units=n_units,
             n_steps=n_steps,
             n_days=Constants.WEEKDAYS_PER_YEAR,
@@ -117,7 +115,7 @@ class LightingProfiles(Appliances):
             sunset=sunset,
             generator=generator,
         )
-        _p_we_morning = self._calc_we_morning(
+        p_we_morning = self._calc_we_morning(
             n_units=n_units,
             n_steps=n_steps,
             n_days=Constants.WEEKENDDAYS_PER_YEAR,
@@ -126,7 +124,7 @@ class LightingProfiles(Appliances):
             sunrise=sunrise,
             generator=generator,
         )
-        _p_we_evening = self._calc_we_evening(
+        p_we_evening = self._calc_we_evening(
             n_units=n_units,
             n_steps=n_steps,
             n_days=Constants.WEEKENDDAYS_PER_YEAR,
@@ -135,9 +133,9 @@ class LightingProfiles(Appliances):
             sunset=sunset,
             generator=generator,
         )
-        _p = _p_wd_morning + _p_wd_evening + _p_we_morning + _p_we_evening
-        _p[_p > 1] = 1
-        p = _p * _p_const
+        p_base = p_wd_morning + p_wd_evening + p_we_morning + p_we_evening
+        p_base[p_base > 1] = 1
+        p = p_base * p_const
         return self._finalize_power(
             n_units=n_units,
             n_steps=n_steps,
@@ -531,7 +529,7 @@ class LightingProfiles(Appliances):
             clear=False,
             generator=generator,
         )
-        return idx * samples_per_day + sunrise[idx] + prob
+        return (idx * samples_per_day + sunrise[idx] + prob).astype(np.int64)
 
     def _calc_time_on_sunset(
         self,
@@ -569,4 +567,4 @@ class LightingProfiles(Appliances):
             clear=False,
             generator=generator,
         )
-        return idx * samples_per_day + sunset[idx] + prob
+        return (idx * samples_per_day + sunset[idx] + prob).astype(np.int64)

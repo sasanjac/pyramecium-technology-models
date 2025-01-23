@@ -1,6 +1,4 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -33,7 +31,8 @@ class HeatPump(Tech, abc.ABC):
 
     def run(self, temp: pd.Series, thermal_demand: pd.Series | None = None) -> None:
         temp_diff_raw = self.target_temp - temp
-        temp_diff = self._resample(target=temp_diff_raw, index=temp.index)
+        index = t.cast("pd.DatetimeIndex", temp.index)
+        temp_diff = self._resample(target=temp_diff_raw, index=index)
 
         cop = self.calc_cop(temp_diff)
         if thermal_demand is None:

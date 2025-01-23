@@ -1,7 +1,5 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :author: Guntram Preßmair
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2025 Guntram Preßmair
 
 from __future__ import annotations
 
@@ -92,7 +90,7 @@ class Driver:
 
     def number_of_trips(self, td: TypeDay) -> NTrips:
         p = N_TRIPS_PROBS[td][self.driving_category]
-        return GEN.choice(a=(0, 1, 2, 3), p=p)
+        return t.cast("NTrips", GEN.choice(a=(0, 1, 2, 3), p=p))
 
     @property
     def driving_category(self) -> DrivingCategory:
@@ -108,13 +106,13 @@ class Driver:
     def daily_distance_wd(self) -> float:
         sigma2 = np.log(1 / self.daily_mean_distance + 1)
         mu = np.log(self.daily_mean_distance) - sigma2 / 2
-        return GEN.lognormal(mu, np.sqrt(sigma2))
+        return float(GEN.lognormal(mu, np.sqrt(sigma2)))
 
     @property
     def daily_distance_we(self) -> float:
         sigma2 = np.log(2 / self.daily_mean_distance + 1)
         mu = np.log(self.daily_mean_distance) - sigma2 / 2
-        return GEN.lognormal(mu, np.sqrt(sigma2))
+        return float(GEN.lognormal(mu, np.sqrt(sigma2)))
 
     @classmethod
     def from_random(cls) -> Driver:
@@ -147,18 +145,20 @@ class EVSystem(Tech):
     charge_point: ChargePoint
     tz: dt.tzinfo
 
-    def charged_internally(self) -> bool:
-        return GEN.choice(a=[False, True], p=[0.15, 0.85])
+    @staticmethod
+    def charged_internally() -> bool:
+        return t.cast("bool", GEN.choice(a=[False, True], p=[0.15, 0.85]))
 
     def charging_start_point(self, td: TypeDay) -> float:
         start, end = CHARGING_TIMES[td][self.driver.number_of_trips(td)]
         return self.charging_time(start=start, end=end)
 
-    def charging_time(self, start: float, end: float) -> float:
+    @staticmethod
+    def charging_time(start: float, end: float) -> float:
         mean = (end - start) / 2
         sigma2 = np.log(1 / mean + 1)
         mu = np.log(mean) - sigma2 / 2
-        return GEN.lognormal(mu, np.sqrt(sigma2))
+        return float(GEN.lognormal(mu, np.sqrt(sigma2)))
 
     def energy(self, td: TypeDay) -> float:
         if (self.driver.number_of_trips(td) > 0) and self.charged_internally():

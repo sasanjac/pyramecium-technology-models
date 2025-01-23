@@ -1,6 +1,4 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -8,7 +6,7 @@ import datetime as dt
 import json
 import tempfile
 import typing as t
-import zoneinfo
+import zoneinfo as zi
 from dataclasses import dataclass
 from dataclasses import field
 
@@ -29,7 +27,7 @@ if t.TYPE_CHECKING:
 
     from pstm.utils.geo import GeoRef
 
-    type Array = npt.NDArray[np.float64]
+    Array1DF = npt.NDArray[np.float64]
 
 
 NEWA_BASE_FILE_NAME = "NEWA_WEATHER_{lat}-{lon}_{year}.nc"
@@ -163,7 +161,7 @@ class WeatherGenerator:
 
         freq = dt.timedelta(seconds=int(metadata["freq"]))
         alt = metadata["alt"]
-        tz = zoneinfo.ZoneInfo(metadata["tz"])
+        tz = zi.ZoneInfo(metadata["tz"])
         dataframe.index = dates.date_range(year=metadata["year"], freq=freq, tz=tz)
         transformer = pyproj.Transformer.from_crs("EPSG:3034", "EPSG:4326")
         lat, lon = transformer.transform(xx=metadata["lat"], yy=metadata["lon"])
@@ -183,110 +181,110 @@ class WeatherGenerator:
         )
 
 
-@dataclass
+@dataclass  # noqa: PLR0904
 class NEWA:
     index: pd.DatetimeIndex
-    roughness_length: npt.NDArray[np.float64]
-    wind_speed_50: npt.NDArray[np.float64]
-    wind_speed_75: npt.NDArray[np.float64]
-    wind_speed_100: npt.NDArray[np.float64]
-    wind_speed_150: npt.NDArray[np.float64]
-    wind_speed_200: npt.NDArray[np.float64]
-    wind_speed_250: npt.NDArray[np.float64]
-    wind_speed_500: npt.NDArray[np.float64]
-    wind_power_density_50: npt.NDArray[np.float64]
-    wind_power_density_75: npt.NDArray[np.float64]
-    wind_power_density_100: npt.NDArray[np.float64]
-    wind_power_density_150: npt.NDArray[np.float64]
-    wind_power_density_200: npt.NDArray[np.float64]
-    wind_power_density_250: npt.NDArray[np.float64]
-    wind_power_density_500: npt.NDArray[np.float64]
-    temperature_2: npt.NDArray[np.float64]
-    temperature_50: npt.NDArray[np.float64]
-    temperature_75: npt.NDArray[np.float64]
-    temperature_100: npt.NDArray[np.float64]
-    temperature_150: npt.NDArray[np.float64]
-    temperature_200: npt.NDArray[np.float64]
-    temperature_250: npt.NDArray[np.float64]
-    temperature_500: npt.NDArray[np.float64]
+    roughness_length: Array1DF
+    wind_speed_50: Array1DF
+    wind_speed_75: Array1DF
+    wind_speed_100: Array1DF
+    wind_speed_150: Array1DF
+    wind_speed_200: Array1DF
+    wind_speed_250: Array1DF
+    wind_speed_500: Array1DF
+    wind_power_density_50: Array1DF
+    wind_power_density_75: Array1DF
+    wind_power_density_100: Array1DF
+    wind_power_density_150: Array1DF
+    wind_power_density_200: Array1DF
+    wind_power_density_250: Array1DF
+    wind_power_density_500: Array1DF
+    temperature_2: Array1DF
+    temperature_50: Array1DF
+    temperature_75: Array1DF
+    temperature_100: Array1DF
+    temperature_150: Array1DF
+    temperature_200: Array1DF
+    temperature_250: Array1DF
+    temperature_500: Array1DF
 
     @property
     def weather(self) -> pd.DataFrame:
         return pd.DataFrame(data=self.data, columns=self.columns, index=self.index)
 
     @property
-    def density_50(self) -> npt.NDArray[np.float64]:
+    def density_50(self) -> Array1DF:
         return self.density(wind_power_density=self.wind_power_density_50, wind_speed=self.wind_speed_50)
 
     @property
-    def pressure_50(self) -> npt.NDArray[np.float64]:
+    def pressure_50(self) -> Array1DF:
         return self.pressure(temperature=self.temperature_50, density=self.density_50)
 
     @property
-    def density_75(self) -> npt.NDArray[np.float64]:
+    def density_75(self) -> Array1DF:
         return self.density(wind_power_density=self.wind_power_density_75, wind_speed=self.wind_speed_75)
 
     @property
-    def pressure_75(self) -> npt.NDArray[np.float64]:
+    def pressure_75(self) -> Array1DF:
         return self.pressure(temperature=self.temperature_75, density=self.density_75)
 
     @property
-    def density_100(self) -> npt.NDArray[np.float64]:
+    def density_100(self) -> Array1DF:
         return self.density(
             wind_power_density=self.wind_power_density_100,
             wind_speed=self.wind_speed_100,
         )
 
     @property
-    def pressure_100(self) -> npt.NDArray[np.float64]:
+    def pressure_100(self) -> Array1DF:
         return self.pressure(temperature=self.temperature_100, density=self.density_100)
 
     @property
-    def density_150(self) -> npt.NDArray[np.float64]:
+    def density_150(self) -> Array1DF:
         return self.density(
             wind_power_density=self.wind_power_density_150,
             wind_speed=self.wind_speed_150,
         )
 
     @property
-    def pressure_150(self) -> npt.NDArray[np.float64]:
+    def pressure_150(self) -> Array1DF:
         return self.pressure(temperature=self.temperature_150, density=self.density_150)
 
     @property
-    def density_200(self) -> npt.NDArray[np.float64]:
+    def density_200(self) -> Array1DF:
         return self.density(
             wind_power_density=self.wind_power_density_200,
             wind_speed=self.wind_speed_200,
         )
 
     @property
-    def pressure_200(self) -> npt.NDArray[np.float64]:
+    def pressure_200(self) -> Array1DF:
         return self.pressure(temperature=self.temperature_200, density=self.density_200)
 
     @property
-    def density_250(self) -> npt.NDArray[np.float64]:
+    def density_250(self) -> Array1DF:
         return self.density(
             wind_power_density=self.wind_power_density_250,
             wind_speed=self.wind_speed_250,
         )
 
     @property
-    def pressure_250(self) -> npt.NDArray[np.float64]:
+    def pressure_250(self) -> Array1DF:
         return self.pressure(temperature=self.temperature_250, density=self.density_250)
 
     @property
-    def density_500(self) -> npt.NDArray[np.float64]:
+    def density_500(self) -> Array1DF:
         return self.density(
             wind_power_density=self.wind_power_density_500,
             wind_speed=self.wind_speed_500,
         )
 
     @property
-    def pressure_500(self) -> npt.NDArray[np.float64]:
+    def pressure_500(self) -> Array1DF:
         return self.pressure(temperature=self.temperature_500, density=self.density_500)
 
     @property
-    def data(self) -> npt.NDArray[np.float64]:
+    def data(self) -> Array1DF:
         data = [
             self.roughness_length,
             self.wind_speed_50,
@@ -315,7 +313,7 @@ class NEWA:
         return np.stack(data, axis=1)
 
     @property
-    def data_feather(self) -> npt.NDArray[np.float64]:
+    def data_feather(self) -> Array1DF:
         data = [
             self.roughness_length,
             self.wind_speed_50,
@@ -438,30 +436,30 @@ class NEWA:
     def from_feather(cls, file_path: pathlib.Path) -> NEWA:
         dataframe = pd.read_feather(file_path)
         return cls(
-            index=dataframe.index,
-            roughness_length=dataframe["roughness_length"],
-            wind_speed_50=dataframe["wind_speed_50"],
-            wind_speed_75=dataframe["wind_speed_75"],
-            wind_speed_100=dataframe["wind_speed_100"],
-            wind_speed_150=dataframe["wind_speed_150"],
-            wind_speed_200=dataframe["wind_speed_200"],
-            wind_speed_250=dataframe["wind_speed_250"],
-            wind_speed_500=dataframe["wind_speed_500"],
-            wind_power_density_50=dataframe["wind_power_density_50"],
-            wind_power_density_75=dataframe["wind_power_density_75"],
-            wind_power_density_100=dataframe["wind_power_density_100"],
-            wind_power_density_150=dataframe["wind_power_density_150"],
-            wind_power_density_200=dataframe["wind_power_density_200"],
-            wind_power_density_250=dataframe["wind_power_density_250"],
-            wind_power_density_500=dataframe["wind_power_density_500"],
-            temperature_2=dataframe["temperature_2"],
-            temperature_50=dataframe["temperature_50"],
-            temperature_75=dataframe["temperature_75"],
-            temperature_100=dataframe["temperature_100"],
-            temperature_150=dataframe["temperature_150"],
-            temperature_200=dataframe["temperature_200"],
-            temperature_250=dataframe["temperature_250"],
-            temperature_500=dataframe["temperature_500"],
+            index=t.cast("pd.DatetimeIndex", dataframe.index),
+            roughness_length=dataframe["roughness_length"].to_numpy(),
+            wind_speed_50=t.cast("Array1DF", dataframe["wind_speed_50"]),
+            wind_speed_75=t.cast("Array1DF", dataframe["wind_speed_75"]),
+            wind_speed_100=t.cast("Array1DF", dataframe["wind_speed_100"]),
+            wind_speed_150=t.cast("Array1DF", dataframe["wind_speed_150"]),
+            wind_speed_200=t.cast("Array1DF", dataframe["wind_speed_200"]),
+            wind_speed_250=t.cast("Array1DF", dataframe["wind_speed_250"]),
+            wind_speed_500=t.cast("Array1DF", dataframe["wind_speed_500"]),
+            wind_power_density_50=t.cast("Array1DF", dataframe["wind_power_density_50"]),
+            wind_power_density_75=t.cast("Array1DF", dataframe["wind_power_density_75"]),
+            wind_power_density_100=t.cast("Array1DF", dataframe["wind_power_density_100"]),
+            wind_power_density_150=t.cast("Array1DF", dataframe["wind_power_density_150"]),
+            wind_power_density_200=t.cast("Array1DF", dataframe["wind_power_density_200"]),
+            wind_power_density_250=t.cast("Array1DF", dataframe["wind_power_density_250"]),
+            wind_power_density_500=t.cast("Array1DF", dataframe["wind_power_density_500"]),
+            temperature_2=t.cast("Array1DF", dataframe["temperature_2"]),
+            temperature_50=t.cast("Array1DF", dataframe["temperature_50"]),
+            temperature_75=t.cast("Array1DF", dataframe["temperature_75"]),
+            temperature_100=t.cast("Array1DF", dataframe["temperature_100"]),
+            temperature_150=t.cast("Array1DF", dataframe["temperature_150"]),
+            temperature_200=t.cast("Array1DF", dataframe["temperature_200"]),
+            temperature_250=t.cast("Array1DF", dataframe["temperature_250"]),
+            temperature_500=t.cast("Array1DF", dataframe["temperature_500"]),
         )
 
     @classmethod
@@ -474,7 +472,7 @@ class NEWA:
     ) -> NEWA:
         url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
         response = requests.get(url, timeout=600)
-        with tempfile.NamedTemporaryFile(delete_on_close=False) as buf:
+        with tempfile.NamedTemporaryFile(delete=False) as buf:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 if chunk:
                     buf.write(chunk)
@@ -547,16 +545,14 @@ class NEWA:
 
     @staticmethod
     def pressure(
-        temperature: npt.NDArray[np.float64],
-        density: npt.NDArray[np.float64],
-    ) -> npt.NDArray[np.float64]:  # Wikipedia
+        temperature: Array1DF,
+        density: Array1DF,
+    ) -> Array1DF:  # Wikipedia
         return temperature * R_SPEC_AIR * density
 
     @staticmethod
     def density(
-        wind_power_density: npt.NDArray[np.float64],
-        wind_speed: npt.NDArray[np.float64],
-    ) -> npt.NDArray[
-        np.float64
-    ]:  # [1] A. Kalmikov, “Wind Power Fundamentals,” in Wind Energy Engineering, Elsevier, 2017, pp. 17-24. doi: 10.1016/B978-0-12-809451-8.00002-3.
+        wind_power_density: Array1DF,
+        wind_speed: Array1DF,
+    ) -> Array1DF:  # [1] A. Kalmikov, “Wind Power Fundamentals,” in Wind Energy Engineering, Elsevier, 2017, pp. 17-24. doi: 10.1016/B978-0-12-809451-8.00002-3.
         return 2 * wind_power_density / wind_speed**3

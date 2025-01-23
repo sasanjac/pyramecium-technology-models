@@ -1,6 +1,5 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
@@ -70,12 +69,13 @@ class PV(Tech):
     ) -> None:
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
-        _acp = self._resample_as_array(target=-self.mc.results.ac, index=weather.index)
-        self.acp.loc[:, ("low", 1)] = _acp
-        self.acp.loc[:, ("base", 1)] = _acp
-        _acq = _acp * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("low", 1)] = _acq
-        self.acq.loc[:, ("high", 1)] = -_acq
+        index = t.cast("pd.DatetimeIndex", weather.index)
+        acp = self._resample_as_array(target=-self.mc.results.ac, index=index)
+        self.acp.loc[:, ("low", 1)] = acp
+        self.acp.loc[:, ("base", 1)] = acp
+        acq = acp * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("low", 1)] = acq
+        self.acq.loc[:, ("high", 1)] = -acq
 
     @classmethod
     def from_efficiency_and_area(

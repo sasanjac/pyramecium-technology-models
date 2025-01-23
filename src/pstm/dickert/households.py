@@ -1,7 +1,5 @@
-# :author: Jörg Dickert <joerg.dickert@tu-dresden.de>
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2015-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
@@ -32,6 +30,8 @@ if t.TYPE_CHECKING:
     import pathlib
 
     import numpy.typing as npt
+
+    Array2DF = npt.NDArray[np.float64]
 
 cattrs.register_structure_hook(dt.datetime, lambda v, _: dt.datetime.fromisoformat(v))
 cattrs.register_structure_hook(dt.date, lambda v, _: dt.date.fromisoformat(v))
@@ -193,8 +193,8 @@ class Households:
     phase_distribution: tuple[float, float, float]
 
     def __attrs_post_init__(self) -> None:
-        self.p = np.empty(shape=(0, 0), dtype=np.float64)
-        self.q = np.empty(shape=(0, 0), dtype=np.float64)
+        self.p: Array2DF = np.empty(shape=(0, 0), dtype=np.float64)
+        self.q: Array2DF = np.empty(shape=(0, 0), dtype=np.float64)
 
     def run(
         self,
@@ -233,12 +233,12 @@ class Households:
 
     @property
     def baseline_appliances(self) -> cabc.Sequence[Appliances]:
-        return self.baseline_profiles + self.cycle_profiles  # type: ignore[operator]
+        return self.baseline_profiles + self.cycle_profiles  # type:ignore[operator, no-any-return]
 
     @property
     def appliances(self) -> cabc.Sequence[Appliances]:
-        return (
-            self.baseline_profiles  # type: ignore[operator]
+        return (  # type:ignore[no-any-return]
+            self.baseline_profiles  # type:ignore[operator]
             + self.cycle_profiles
             + self.on_off_profiles
             + self.process_profiles
@@ -272,18 +272,24 @@ class Households:
         p, self.p = (self.p[:, 0, :], self.p[:, 1:, :])
         q, self.q = (self.q[:, 0, :], self.q[:, 1:, :])
         step_length = Constants.MINUTES_PER_YEAR / self.n_steps
-        _index = dates.date_range(tz=self.tz, year=self.year, freq=dt.timedelta(minutes=step_length))
-        dfp = pd.DataFrame(p, index=_index)
-        dfq = pd.DataFrame(q, index=_index)
-        dfp = dfp.resample(rule=index.freq).mean()
-        dfq = dfq.resample(rule=index.freq).mean()
+        index = dates.date_range(tz=self.tz, year=self.year, freq=dt.timedelta(minutes=step_length))
+        dfp = pd.DataFrame(p, index=index)
+        dfq = pd.DataFrame(q, index=index)
+        freq = index.freq
+        if freq is None:
+            msg = "The frequency of the index is not set."
+            raise ValueError(msg)
+
+        dfp = dfp.resample(rule=freq).mean()
+        dfq = dfq.resample(rule=freq).mean()
 
         t = Tech(dates=index)
         t.acp = self._df_from_array(index=index, data=dfp.to_numpy())
         t.acq = self._df_from_array(index=index, data=dfq.to_numpy())
         return t
 
-    def _df_from_array(self, *, index: pd.DatetimeIndex, data: npt.NDArray[np.float64]) -> pd.DataFrame:
+    @staticmethod
+    def _df_from_array(*, index: pd.DatetimeIndex, data: Array2DF) -> pd.DataFrame:
         return pd.DataFrame(
             data=np.stack(
                 [
@@ -313,15 +319,15 @@ class Households:
                         "low",
                     ],
                     [
-                        1,
-                        2,
-                        3,
-                        1,
-                        2,
-                        3,
-                        1,
-                        2,
-                        3,
+                        "L1",
+                        "L2",
+                        "L3",
+                        "L1",
+                        "L2",
+                        "L3",
+                        "L1",
+                        "L2",
+                        "L3",
                     ],
                 ],
             ),

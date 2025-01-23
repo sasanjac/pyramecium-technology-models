@@ -1,10 +1,9 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
-import zoneinfo
+import zoneinfo as zi
 
 from pstm.storage import Storage
+from pstm.storage import StorageType
 from pstm.utils.dates import date_range
 
 POWER_INST_IN = 100
@@ -13,14 +12,14 @@ CAPACITY = 1000
 EFFICIENCY_IN = 0.9
 EFFICIENCY_OUT = 0.8
 SELF_DISCHARGE = 0.05
-STORAGE_TYPE = "EL"
+STORAGE_TYPE = StorageType.EL
 COSPHI = 0.9
 
 
-def test_storage_run():
+def test_storage_run() -> None:
     # Create a Storage instance with some initial values
     storage = Storage(
-        dates=date_range(tz=zoneinfo.ZoneInfo("Europe/Berlin"), year=2050),
+        dates=date_range(tz=zi.ZoneInfo("Europe/Berlin"), year=2050),
         power_inst_in=POWER_INST_IN,
         power_inst_out=POWER_INST_OUT,
         capacity=CAPACITY,

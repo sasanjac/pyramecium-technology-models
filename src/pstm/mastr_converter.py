@@ -1,6 +1,5 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
+
 from __future__ import annotations
 
 import pathlib
@@ -37,7 +36,8 @@ class MaStRCatalog:
 
     def get_code(self, code_str: str) -> int:
         condition = self._catalog["Wert"] == code_str
-        return self._catalog[condition]["Id"].to_numpy(dtype=np.float64).flatten()[0]
+        values = self._catalog[condition]["Id"].to_numpy(dtype=np.int64).flatten()
+        return int(values[0]) if values.size > 0 else -1
 
     def get_value(self, code: float) -> float | None:
         try:
@@ -45,7 +45,8 @@ class MaStRCatalog:
         except ValueError:
             return None
         else:
-            return self._catalog[condition]["Wert"].to_numpy(dtype=np.float64).flatten()[0]
+            values = self._catalog[condition]["Wert"].to_numpy(dtype=np.int64).flatten()[0]
+            return int(values[0]) if values.size > 0 else -1
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -78,7 +79,7 @@ class MaStRConverter:
         )
         for cond in self.conds_extra:
             k, v = cond
-            conds = conds & (self.dataframe[k] == self.catalog.get_code(v))
+            conds &= self.dataframe[k] == self.catalog.get_code(v)
 
         return conds
 
