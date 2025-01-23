@@ -60,7 +60,7 @@
   [tool.commitizen]
     name = "cz_conventional_commits"
     tag_format = "$version"
-    version = "0.0.0"
+    version = "1.0.2"
     version_files = [
       "pyproject.toml:version",
       "src/pyramecium/__version__.py:VERSION",
