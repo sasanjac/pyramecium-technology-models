@@ -1,7 +1,5 @@
-# :author: Jörg Dickert <joerg.dickert@tu-dresden.de>
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2015-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2015-2025 Sasan Jacob Rasti
+# Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
@@ -33,7 +31,7 @@ class ProcessProfiles(OnOffProfiles):
     operation_2_parameter_1: float
     operation_2_parameter_2: float
 
-    def _run(
+    def _run(  # noqa: PLR0914
         self,
         *,
         n_units: int,
@@ -45,14 +43,14 @@ class ProcessProfiles(OnOffProfiles):
         year: int,  # noqa: ARG002
         tz: dt.tzinfo,  # noqa: ARG002
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-        _p = self._sim_distribution(
+        p1_base = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
             n_units=n_units,
             generator=generator,
         )
-        _p_2 = self._sim_distribution(
+        p2_base = self._sim_distribution(
             distribution_type=self.active_power_2_distribution_type,
             parameter_1=self.active_power_2_parameter_1,
             parameter_2=self.active_power_2_parameter_2,
@@ -112,7 +110,7 @@ class ProcessProfiles(OnOffProfiles):
         p_1 = self._finalize_active_power(
             n_steps=n_steps,
             n_units=n_units,
-            active_power=_p,
+            active_power=p1_base,
             time_on=time_on,
             time_off=time_off_1,
         )
@@ -120,7 +118,7 @@ class ProcessProfiles(OnOffProfiles):
         p_2 = self._finalize_active_power(
             n_steps=n_steps,
             n_units=n_units,
-            active_power=_p_2,
+            active_power=p2_base,
             time_on=time_off_1,
             time_off=time_off_2,
         )

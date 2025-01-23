@@ -1,10 +1,10 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
 from __future__ import annotations
 
+import collections.abc as cabc
 import pathlib
+import typing as t
 
 import attrs
 import numpy as np
@@ -64,22 +64,23 @@ class Wind(Tech):
 
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
-        _acp = self._resample_as_array(target=-self.mc.power_output, index=weather.index)
-        self.acp.loc[:, ("low", 1)] = _acp
-        self.acp.loc[:, ("base", 1)] = _acp
-        _acq = _acp * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("low", 1)] = _acq
-        self.acq.loc[:, ("high", 1)] = -_acq
+        index = t.cast("pd.DatetimeIndex", weather.index)
+        acp = self._resample_as_array(target=-self.mc.power_output, index=index)
+        self.acp.loc[:, ("low", 1)] = acp
+        self.acp.loc[:, ("base", 1)] = acp
+        acq = acp * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("low", 1)] = acq
+        self.acq.loc[:, ("high", 1)] = -acq
 
     @property
     def ac(self) -> pd.Series:
-        return self.mc.power_output
+        return t.cast("pd.Series", self.mc.power_output)
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
-class WindFarm(Tech):
+class WindFarm(Tech):  # type:ignore[no-any-unimported]
     powers_inst: list[float]
-    units: list[wpl.WindTurbine] | None = None
+    units: cabc.Sequence[wpl.WindTurbine] | None = None  # type:ignore[no-any-unimported]
     n_units: list[int] | list[None] | None = None
     cosphi: float = attrs.field(default=0.9)
 
@@ -96,16 +97,17 @@ class WindFarm(Tech):
 
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
-        _acp = self._resample_as_array(target=-self.mc.power_output, index=weather.index)
-        self.acp.loc[:, ("low", 1)] = _acp
-        self.acp.loc[:, ("base", 1)] = _acp
-        _acq = _acp * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("low", 1)] = _acq
-        self.acq.loc[:, ("high", 1)] = -_acq
+        index = t.cast("pd.DatetimeIndex", weather.index)
+        acp = self._resample_as_array(target=-self.mc.power_output, index=index)
+        self.acp.loc[:, ("low", 1)] = acp
+        self.acp.loc[:, ("base", 1)] = acp
+        acq = acp * np.tan(np.arccos(self.cosphi))
+        self.acq.loc[:, ("low", 1)] = acq
+        self.acq.loc[:, ("high", 1)] = -acq
 
     @property
     def ac(self) -> pd.Series:
-        return self.mc.power_output
+        return t.cast("pd.Series", self.mc.power_output)
 
     @classmethod
     def from_power_inst(cls, dates: pd.DatetimeIndex, power_inst: float) -> WindFarm:
@@ -128,7 +130,7 @@ class WindFarm(Tech):
         hub_heights: list[float],
     ) -> WindFarm:
         dataframe = pd.read_feather(SRC_PATH / "data/wind/turbines.feather")
-        units: list[wpl.WindTurbine] = []
+        units: cabc.MutableSequence[wpl.WindTurbine] = []  # type:ignore[no-any-unimported]
         for hub_height in hub_heights:
             condition = (dataframe.hub_height - hub_height).abs().argsort()
             data = dataframe.iloc[condition].iloc[0]

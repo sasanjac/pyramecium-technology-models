@@ -1,7 +1,5 @@
-# :author: Jörg Dickert <joerg.dickert@tu-dresden.de>
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2015-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
@@ -23,15 +21,15 @@ Phase = t.Literal[0, 1, 2, 3]
 
 
 class Constants:
-    WEEKS_PER_YEAR = 52
-    MINUTES_PER_YEAR = 525_600
-    MINUTES_PER_DAY = 1440
-    DAYS_PER_WEEK = 7
-    MINUTES_PER_HOUR = 60
-    HOURS_PER_DAY = 24
-    DAYS_PER_YEAR = 365
-    WEEKDAYS_PER_YEAR = 261
-    WEEKENDDAYS_PER_YEAR = 104
+    WEEKS_PER_YEAR: int = 52
+    MINUTES_PER_YEAR: int = 525_600
+    MINUTES_PER_DAY: int = 1440
+    DAYS_PER_WEEK: int = 7
+    MINUTES_PER_HOUR: int = 60
+    HOURS_PER_DAY: int = 24
+    DAYS_PER_YEAR: int = 365
+    WEEKDAYS_PER_YEAR: int = 261
+    WEEKENDDAYS_PER_YEAR: int = 104
 
 
 def validate_pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG001
@@ -75,8 +73,8 @@ class Appliances:
     reactive_power_parameter_2: float = attrs.field(validator=validate_level)
     reactive_power_parameter_3: float = attrs.field(validator=validate_level)
 
+    @staticmethod
     def _sim_distribution(
-        self,
         *,
         distribution_type: DistributionType,
         parameter_1: float,
@@ -141,11 +139,12 @@ class Appliances:
         )
         return np.round(x).astype(np.int64)
 
-    def _time_as_float(self, time: dt.time) -> float:
+    @staticmethod
+    def _time_as_float(time: dt.time) -> float:
         return time.hour / 24 + time.minute / (24 * 60)
 
+    @staticmethod
     def _finalize_active_power(
-        self,
         *,
         n_steps: int,
         n_units: int,
@@ -153,11 +152,11 @@ class Appliances:
         time_on: npt.NDArray[np.int64],
         time_off: npt.NDArray[np.int64],
     ) -> npt.NDArray[np.float64]:
-        _n_steps = np.max([np.max([time_on, time_off]) + 1, n_steps])
-        p = np.zeros((_n_steps, n_units))
+        n_rows = np.max([np.max([time_on, time_off]) + 1, n_steps])
+        p = np.zeros((n_rows, n_units))
         for i in range(n_units):
             p[time_off[time_off[:, i] > 0, i], i] = -1
-            p[time_on[time_on[:, i] > 0, i], i] = p[time_on[time_on[:, i] > 0, i], i] + 1
+            p[time_on[time_on[:, i] > 0, i], i] += 1
 
         p = np.cumsum(p, axis=0)
         p[p > 1] = 1
@@ -254,8 +253,8 @@ class Appliances:
 
         return (active_power, reactive_power)
 
+    @staticmethod
     def _calc_steps(
-        self,
         *,
         day_index_start: int,
         day_index_end: int,
@@ -263,7 +262,11 @@ class Appliances:
         add_tail: bool = False,
     ) -> npt.NDArray[np.int64]:
         if add_tail:
-            tail = [np.array([Constants.WEEKS_PER_YEAR * Constants.DAYS_PER_WEEK + day_index_start]) * samples_per_day]
+            tail = [
+                np.ones(1, dtype=np.int64)
+                * (Constants.WEEKS_PER_YEAR * Constants.DAYS_PER_WEEK + day_index_start)
+                * samples_per_day,
+            ]
         else:
             tail = []
 

@@ -1,6 +1,4 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -26,7 +24,7 @@ class Tech:
             columns=pd.MultiIndex.from_arrays(
                 [
                     ["high", "base", "low"],
-                    [1, 1, 1],
+                    ["L1", "L1", "L1"],
                 ],
             ),
             index=self.dates,
@@ -41,7 +39,7 @@ class Tech:
             columns=pd.MultiIndex.from_arrays(
                 [
                     ["high", "base", "low"],
-                    [1, 1, 1],
+                    ["L1", "L1", "L1"],
                 ],
             ),
             index=self.dates,
@@ -146,8 +144,12 @@ class Tech:
                 method="linear",
                 limit_direction="both",
             )
+        freq = self.dates.freq
+        if freq is None:
+            msg = "The frequency of the index is not defined."
+            raise ValueError(msg)
 
-        return target.resample(self.dates.freq).mean().reindex(index=self.dates)
+        return target.resample(freq).mean().reindex(index=self.dates)
 
     def _resample_as_array(self, target: pd.Series, index: pd.DatetimeIndex) -> npt.NDArray[np.float64]:
         return self._resample(target, index).to_numpy(dtype=np.float64)

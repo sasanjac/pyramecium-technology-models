@@ -1,12 +1,10 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
 from __future__ import annotations
 
 import datetime as dt
 import pathlib
-import zoneinfo
+import zoneinfo as zi
 from typing import Literal
 
 import click
@@ -58,7 +56,7 @@ def convert(
     dwd_files = [file for file in input_path.iterdir() if file.suffix == ".dat"]
     n_files = len(dwd_files)
     output_path.mkdir(exist_ok=True, parents=True)
-    tz = zoneinfo.ZoneInfo("Europe/Berlin")
+    tz = zi.ZoneInfo("Europe/Berlin")
     date_index = date_range(tz, freq=dt.timedelta(hours=1), year=year)
     file_name_template = f"dwd_try_{year}_{scenario}_{{:06d}}_epsg3034.feather"
     with GeoRef(

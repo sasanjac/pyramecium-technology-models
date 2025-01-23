@@ -1,7 +1,5 @@
-# :author: Jörg Dickert <joerg.dickert@tu-dresden.de>
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2015-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
@@ -93,7 +91,7 @@ class OnOffProfiles(OperationProfiles):
         year: int,  # noqa: ARG002
         tz: dt.tzinfo,  # noqa: ARG002
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-        _p = self._sim_p_distribution(
+        p_base = self._sim_p_distribution(
             distribution_type=self.active_power_distribution_type,
             parameter_1=self.active_power_parameter_1,
             parameter_2=self.active_power_parameter_2,
@@ -138,7 +136,7 @@ class OnOffProfiles(OperationProfiles):
         p = self._finalize_active_power(
             n_steps=n_steps,
             n_units=n_units,
-            active_power=_p,
+            active_power=p_base,
             time_on=time_on,
             time_off=time_off,
         )
@@ -180,9 +178,8 @@ class OnOffProfiles(OperationProfiles):
         shift = np.sin(2 * np.pi / n_steps * steps - 2 * np.pi * 3 / 4 - 28 / Constants.DAYS_PER_YEAR * 2 * np.pi)
         time_on[time_on > (n_steps - 1)] = n_steps - 1
         for i in range(n_units):
-            operation_length[time_on[:, i] != 0, i] = (
-                operation_length[time_on[:, i] != 0, i]
-                + operation_length[time_on[:, i] != 0, i] * shift[time_on[time_on[:, i] != 0, i]] * variation
+            operation_length[time_on[:, i] != 0, i] += (
+                operation_length[time_on[:, i] != 0, i] * shift[time_on[time_on[:, i] != 0, i]] * variation
             )
 
         operation_length[operation_length <= 0] = 1

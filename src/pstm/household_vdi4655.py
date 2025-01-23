@@ -1,6 +1,4 @@
-# :author: Sasan Jacob Rasti <sasan_jacob.rasti@tu-dresden.de>
-# :copyright: Copyright (c) Institute of Electrical Power Systems and High Voltage Engineering - TU Dresden, 2022-2023.
-# :license: BSD 3-Clause
+# Copyright (c) 2018-2025 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -23,7 +21,7 @@ from pstm.utils.geo import GeoRef
 if t.TYPE_CHECKING:
     import numpy.typing as npt
 
-    JSONTypes = None | bool | str | float | list["JSONTypes"] | dict[str, "JSONTypes"]
+    JSONTypes = bool | str | float | list["JSONTypes"] | dict[str, "JSONTypes"] | None
 
     Profiles = dict[str, list[float]]
     ProfilesMapping = dict[str, Profiles]
@@ -76,7 +74,7 @@ POWER_FACTORS = [  # Moller et al - Probabilistic household load model for unbal
 
 def load_json_from_file(path: pathlib.Path) -> JSONTypes:
     with path.open(encoding="utf-8") as f:
-        return json.load(f)
+        return t.cast("JSONTypes", json.load(f))
 
 
 HOUSE_TYPES = t.Literal["MFH", "OFH"]
@@ -241,10 +239,12 @@ class Household(Tech):
         return np.concatenate(energy_profiles) * self.power_conversion_factor
 
     def _calculate_reactive_electrical_demand(self) -> npt.NDArray[np.float64]:
-        acp = self.acp.high[1].to_numpy(dtype=np.float64)
+        acp = t.cast("npt.NDArray[np.float64]", self.acp.high.L1.to_numpy(dtype=np.float64))
         sign = random.randint(0, 1)  # capacitive or inductive  # noqa: S311
         cosphi = self._cosphi(sign, acp)
-        return (sign * 2 - 1) * acp * np.tan(np.arccos(cosphi))
+        x = np.tan(np.arccos(cosphi)).astype(np.float64)
+        return (sign * 2 - 1) * acp * x  # type:ignore[no-any-return]
 
-    def _cosphi(self, sign: int, acp: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    @staticmethod
+    def _cosphi(sign: int, acp: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         return POWER_FACTORS[sign]["a"] - np.exp(-POWER_FACTORS[sign]["b"] * acp)
