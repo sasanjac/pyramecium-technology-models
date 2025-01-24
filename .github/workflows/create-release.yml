@@ -62,6 +62,11 @@
         - name: Build python packages
           run: uv build
 
+        - name: Publish python packages
+          run: uv publish
+          env:
+            UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
         - name: Create github release
           uses: softprops/action-gh-release@v2.2.1
           with:
