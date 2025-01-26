@@ -23,11 +23,9 @@ from pstm.utils import dates
 if t.TYPE_CHECKING:
     import pathlib
 
-    import numpy.typing as npt
-
     from pstm.utils.geo import GeoRef
 
-    Array1DF = npt.NDArray[np.float64]
+    type Array1DF = np.ndarray[tuple[int], np.dtype[np.float64]]
 
 
 NEWA_BASE_FILE_NAME = "NEWA_WEATHER_{lat}-{lon}_{year}.nc"
