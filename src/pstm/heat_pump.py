@@ -36,13 +36,15 @@ class HeatPump(Tech, abc.ABC):
 
         cop = self.calc_cop(temp_diff)
         if thermal_demand is None:
-            self._th.low = (-cop * self.power_inst).to_numpy(dtype=np.float64)
-            self.acp.high = self.power_inst * np.ones(len(self.dates))
+            self._th.loc[:, "low"] = (-cop * self.power_inst).to_numpy(dtype=np.float64)
+            self.acp.loc[:, ("high", "L1")] = self.power_inst * np.ones(len(self.dates))
         else:
-            self._th.low = (-thermal_demand).to_numpy(dtype=np.float64)
-            self.acp.high = np.divide(thermal_demand, cop)
+            self._th.loc[:, "low"] = (-thermal_demand).to_numpy(dtype=np.float64)
+            self.acp.loc[:, ("high", "L1")] = np.divide(thermal_demand, cop)
 
-        self.acq.high = (self.acp.high * np.tan(np.arccos(self.cosphi))).to_numpy(dtype=np.float64)
+        self.acq.loc[:, ("high", "L1")] = (self.acp.loc[:, ("high", "L1")] * np.tan(np.arccos(self.cosphi))).to_numpy(
+            dtype=np.float64,
+        )
 
     @abc.abstractmethod
     def calc_cop(self, temp_diff: pd.Series) -> pd.Series:
