@@ -42,7 +42,9 @@ class HeatPump(Tech, abc.ABC):
             self._th.loc[:, "low"] = (-thermal_demand).to_numpy(dtype=np.float64)
             self.acp.loc[:, ("high", "L1")] = np.divide(thermal_demand, cop)
 
-        self.acq.loc[:, ("high", "L1")] = (self.acp.loc[:, ("high", "L1")] * np.tan(np.arccos(self.cosphi))).to_numpy(
+        self.acq.loc[:, ("high", "L1")] = (
+            self.acp.loc[:, "high"].loc[:, "L1"] * np.tan(np.arccos(self.cosphi))
+        ).to_numpy(
             dtype=np.float64,
         )
 
