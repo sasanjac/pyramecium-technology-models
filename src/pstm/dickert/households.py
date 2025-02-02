@@ -268,14 +268,14 @@ class Households:
 
         return cattrs.structure(data, Households)
 
-    def get(self, index: pd.DatetimeIndex) -> Tech:
+    def get(self, index_target: pd.DatetimeIndex) -> Tech:
         p, self.p = (self.p[:, 0, :], self.p[:, 1:, :])
         q, self.q = (self.q[:, 0, :], self.q[:, 1:, :])
         step_length = Constants.MINUTES_PER_YEAR / self.n_steps
         index = dates.date_range(tz=self.tz, year=self.year, freq=dt.timedelta(minutes=step_length))
         dfp = pd.DataFrame(p, index=index)
         dfq = pd.DataFrame(q, index=index)
-        freq = index.freq
+        freq = index_target.freq
         if freq is None:
             msg = "The frequency of the index is not set."
             raise ValueError(msg)
@@ -283,9 +283,9 @@ class Households:
         dfp = dfp.resample(rule=freq).mean()
         dfq = dfq.resample(rule=freq).mean()
 
-        t = Tech(dates=index)
-        t.acp = self._df_from_array(index=index, data=dfp.to_numpy())
-        t.acq = self._df_from_array(index=index, data=dfq.to_numpy())
+        t = Tech(dates=index_target)
+        t.acp = self._df_from_array(index=index_target, data=dfp.to_numpy())
+        t.acq = self._df_from_array(index=index_target, data=dfq.to_numpy())
         return t
 
     @staticmethod

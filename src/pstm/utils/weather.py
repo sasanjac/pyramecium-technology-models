@@ -23,11 +23,9 @@ from pstm.utils import dates
 if t.TYPE_CHECKING:
     import pathlib
 
-    import numpy.typing as npt
-
     from pstm.utils.geo import GeoRef
 
-    Array1DF = npt.NDArray[np.float64]
+    type Array1DF = np.ndarray[tuple[int], np.dtype[np.float64]]
 
 
 NEWA_BASE_FILE_NAME = "NEWA_WEATHER_{lat}-{lon}_{year}.nc"
@@ -310,7 +308,7 @@ class NEWA:
             self.temperature_250,
             self.temperature_500,
         ]
-        return np.stack(data, axis=1)
+        return t.cast("Array1DF", np.stack(data, axis=1))
 
     @property
     def data_feather(self) -> Array1DF:
@@ -339,7 +337,7 @@ class NEWA:
             self.temperature_250,
             self.temperature_500,
         ]
-        return np.stack(data, axis=1)
+        return t.cast("Array1DF", np.stack(data, axis=1))
 
     @property
     def columns(self) -> pd.MultiIndex:
@@ -548,11 +546,11 @@ class NEWA:
         temperature: Array1DF,
         density: Array1DF,
     ) -> Array1DF:  # Wikipedia
-        return temperature * R_SPEC_AIR * density
+        return t.cast("Array1DF", temperature * R_SPEC_AIR * density)
 
     @staticmethod
     def density(
         wind_power_density: Array1DF,
         wind_speed: Array1DF,
     ) -> Array1DF:  # [1] A. Kalmikov, “Wind Power Fundamentals,” in Wind Energy Engineering, Elsevier, 2017, pp. 17-24. doi: 10.1016/B978-0-12-809451-8.00002-3.
-        return 2 * wind_power_density / wind_speed**3
+        return t.cast("Array1DF", 2 * wind_power_density / wind_speed**3)

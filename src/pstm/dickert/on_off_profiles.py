@@ -180,7 +180,7 @@ class OnOffProfiles(OperationProfiles):
         for i in range(n_units):
             operation_length[time_on[:, i] != 0, i] += (
                 operation_length[time_on[:, i] != 0, i] * shift[time_on[time_on[:, i] != 0, i]] * variation
-            )
+            ).astype(np.int64)
 
         operation_length[operation_length <= 0] = 1
         return operation_length
