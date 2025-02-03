@@ -71,11 +71,11 @@ class PV(Tech):
         self.mc.run_model(self.mc.results.weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
         acp = self._resample_as_array(target=-self.mc.results.ac, index=index)
-        self.acp.loc[:, ("low", 1)] = acp
-        self.acp.loc[:, ("base", 1)] = acp
+        self.acp.loc[:, ("low", "L1")] = acp
+        self.acp.loc[:, ("base", "L1")] = acp
         acq = acp * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("low", 1)] = acq
-        self.acq.loc[:, ("high", 1)] = -acq
+        self.acq.loc[:, ("low", "L1")] = acq
+        self.acq.loc[:, ("high", "L1")] = -acq
 
     @classmethod
     def from_efficiency_and_area(

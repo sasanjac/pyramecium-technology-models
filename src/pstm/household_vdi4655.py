@@ -201,11 +201,11 @@ class Household(Tech):
             if random_shift is True:
                 active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))  # noqa: S311
 
-            self.acp.loc[:, ("high", 1)] = self._resample_as_array(
+            self.acp.loc[:, ("high", "L1")] = self._resample_as_array(
                 target=pd.Series(data=active_electrical_demand),
                 index=index,
             )
-            self.acq.loc[:, ("high", 1)] = self._calculate_reactive_electrical_demand()
+            self.acq.loc[:, ("high", "L1")] = self._calculate_reactive_electrical_demand()
 
     def _calculate_water_thermal_demand(self) -> npt.NDArray[np.float64]:
         energy = WATER_DEMAND[self.house_type] * self.n_units
