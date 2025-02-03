@@ -1,3 +1,10 @@
+## 1.0.5 (2025-02-03)
+
+### Fix
+
+- wrong phase assignment (#59)
+- numpy type casting (#55)
+
 ## 1.0.4 (2025-01-24)
 
 ### Fix
