@@ -179,7 +179,9 @@ class OnOffProfiles(OperationProfiles):
         time_on[time_on > (n_steps - 1)] = n_steps - 1
         for i in range(n_units):
             operation_length[time_on[:, i] != 0, i] += (
-                operation_length[time_on[:, i] != 0, i] * shift[time_on[time_on[:, i] != 0, i]] * variation
+                operation_length[time_on[:, i] != 0, i].astype(np.float64)
+                * shift[time_on[time_on[:, i] != 0, i]]
+                * variation
             ).astype(np.int64)
 
         operation_length[operation_length <= 0] = 1
