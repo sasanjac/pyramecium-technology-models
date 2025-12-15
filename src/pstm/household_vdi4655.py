@@ -243,7 +243,7 @@ class Household(Tech):
         sign = random.randint(0, 1)  # capacitive or inductive  # noqa: S311
         cosphi = self._cosphi(sign, acp)
         x = np.tan(np.arccos(cosphi)).astype(np.float64)
-        return (sign * 2 - 1) * acp * x  # type:ignore[no-any-return]
+        return (sign * 2 - 1) * acp * x
 
     @staticmethod
     def _cosphi(sign: int, acp: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:

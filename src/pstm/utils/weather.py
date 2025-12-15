@@ -2,33 +2,35 @@
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import json
+import pathlib
 import tempfile
 import typing as t
 import zoneinfo as zi
 from dataclasses import dataclass
 from dataclasses import field
 
-import aiofiles
 import aiohttp
 import netCDF4
 import numpy as np
 import pandas as pd
 import pyproj
 import requests
+from loguru import logger
 
 from pstm.utils import dates
 
 if t.TYPE_CHECKING:
-    import pathlib
-
     from pstm.utils.geo import GeoRef
 
     type Array1DF = np.ndarray[tuple[int], np.dtype[np.float64]]
 
 
 NEWA_BASE_FILE_NAME = "NEWA_WEATHER_{lat}-{lon}_{year}.nc"
+NEWA_BASE_FEATHER_FILE_NAME = "NEWA_WEATHER_{lat:.3f}-{lon:.3f}_{year}.feather"
+NEWA_BASE_PATH = pathlib.Path(__file__).parent.parent.parent.parent / "data" / "weather" / "newa"
 NEWA_BASE_URL = "https://wps.neweuropeanwindatlas.eu/api/mesoscale-ts/v1/get-data-point?latitude={lat}&longitude={lon}&height=50&height=75&height=100&height=150&height=200&height=250&height=500&variable=HGT&variable=LU_INDEX&variable=LANDMASK&variable=ZNT&variable=T2&variable=WS&variable=T&variable=PD&dt_start={year}-01-01T00:00:00&dt_stop={year2}-01-01T00:00:00"
 R_SPEC_AIR = 287.0500676
 DOWNLOAD_OK = 200
@@ -179,7 +181,7 @@ class WeatherGenerator:
         )
 
 
-@dataclass  # noqa: PLR0904
+@dataclass
 class NEWA:
     index: pd.DatetimeIndex
     roughness_length: Array1DF
@@ -400,35 +402,38 @@ class NEWA:
     def columns_feather(self) -> pd.Index:
         return pd.Index(
             [
-                "roughness_length-0",
-                "wind_speed-50",
-                "wind_speed-75",
-                "wind_speed-100",
-                "wind_speed-150",
-                "wind_speed-200",
-                "wind_speed-250",
-                "wind_speed-500",
-                "wind_power_density-50",
-                "wind_power_density-75",
-                "wind_power_density-100",
-                "wind_power_density-150",
-                "wind_power_density-200",
-                "wind_power_density-250",
-                "wind_power_density-500",
-                "temperature-2",
-                "temperature-50",
-                "temperature-75",
-                "temperature-100",
-                "temperature-150",
-                "temperature-200",
-                "temperature-250",
-                "temperature-500",
+                "roughness_length_0",
+                "wind_speed_50",
+                "wind_speed_75",
+                "wind_speed_100",
+                "wind_speed_150",
+                "wind_speed_200",
+                "wind_speed_250",
+                "wind_speed_500",
+                "wind_power_density_50",
+                "wind_power_density_75",
+                "wind_power_density_100",
+                "wind_power_density_150",
+                "wind_power_density_200",
+                "wind_power_density_250",
+                "wind_power_density_500",
+                "temperature_2",
+                "temperature_50",
+                "temperature_75",
+                "temperature_100",
+                "temperature_150",
+                "temperature_200",
+                "temperature_250",
+                "temperature_500",
             ],
         )
 
     def to_feather(self, file_path: pathlib.Path) -> None:
         dataframe = pd.DataFrame(data=self.data_feather, columns=self.columns_feather, index=self.index)
-        dataframe.reset_index().to_feather(file_path)
+        idx = dataframe.index
+        _dataframe = dataframe.reset_index()
+        _dataframe.index = idx
+        _dataframe.to_feather(file_path)
 
     @classmethod
     def from_feather(cls, file_path: pathlib.Path) -> NEWA:
@@ -475,43 +480,62 @@ class NEWA:
                 if chunk:
                     buf.write(chunk)
 
-            buf.close()
             return cls.from_nc(file_path=buf.name, tz=tz)
 
     @classmethod
-    async def download(
+    async def from_api_async(
         cls,
         lat: float,
         lon: float,
         year: int,
-        data_path: pathlib.Path,
-    ) -> pathlib.Path:
-        file_path = data_path / NEWA_BASE_FILE_NAME.format(lat=lat, lon=lon, year=year)
-        if not file_path.exists():
+        tz: dt.tzinfo,
+    ) -> NEWA:
+        lat = round(lat, 3)
+        lon = round(lon, 3)
+        file_path = NEWA_BASE_PATH / NEWA_BASE_FEATHER_FILE_NAME.format(lat=lat, lon=lon, year=year)
+        try:
+            return cls.from_feather(file_path=file_path)
+        except FileNotFoundError:
+            logger.trace("Downloading NEWA data for lat={lat}, lon={lon}, year={year}", lat=lat, lon=lon, year=year)
             url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
-            async with (
-                aiohttp.ClientSession() as session,
-                session.get(url) as response,
-            ):
-                if response.status != DOWNLOAD_OK:
-                    msg = f"Error: {response.status}"
-                    raise ValueError(msg)
+            while True:
+                try:
+                    return await cls.download_and_convert(url=url, file_path=file_path, tz=tz)
+                except TimeoutError:
+                    await asyncio.sleep(1)
 
-                async with aiofiles.open(file_path, mode="wb") as file_handle:
-                    async for data in response.content.iter_chunked(CHUNK_SIZE):
-                        await file_handle.write(data)
+    @classmethod
+    async def download_and_convert(cls, url: str, file_path: pathlib.Path, tz: dt.tzinfo) -> NEWA:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(url, timeout=aiohttp.ClientTimeout(600)) as response,
+        ):
+            if response.status != DOWNLOAD_OK:
+                msg = f"Error: {response.status}"
+                raise ValueError(msg) from None
 
-        return file_path
+            with tempfile.NamedTemporaryFile(delete_on_close=False) as buf:
+                async for chunk in response.content.iter_chunked(CHUNK_SIZE):
+                    if chunk:
+                        buf.write(chunk)
+
+                logger.trace("Converting NEWA data to feather format")
+                data = cls.from_nc(file_path=buf.name, tz=tz)
+                data.to_feather(file_path=file_path)
+                return data
 
     @classmethod
     def from_nc(cls, file_path: pathlib.Path | str, tz: dt.tzinfo) -> NEWA:
         data = netCDF4.Dataset(file_path, mode="r")
-        np_index = np.datetime64(
-            dt.datetime(1989, 1, 1, 0, 0, 0, tzinfo=tz).astimezone(dt.UTC).replace(tzinfo=None),
-        ) + data.variables["time"][:].astype(
-            "timedelta64[m]",
+
+        index = pd.date_range(
+            start=data.temporalExtentMinimum,
+            end=data.temporalExtentMaximum,
+            periods=data.dimensions["time"].size + 1,
+            tz=tz,
+            inclusive="left",
         )
-        index = pd.DatetimeIndex(np_index).tz_localize("utc").tz_convert(tz)
+
         newa = cls(
             index=index,
             roughness_length=data.variables["ZNT"][:].data,
