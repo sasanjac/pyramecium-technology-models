@@ -6,11 +6,12 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import open_mastr
 import pandas as pd
-from open_mastr import Mastr
 
 if TYPE_CHECKING:
     from pstm.utils.geo import GeoRef
+
 
 THRESHOLD = 0.01
 LAT_MIN = 47.271679
@@ -24,8 +25,8 @@ class MaStR:
     georef: GeoRef
 
     def __post_init__(self) -> None:
-        self.db = Mastr()
-        # if (datetime.date.today - self.db.date) > datetime.timedelta(days=7):
+        self.db = open_mastr.Mastr()
+
         with self.db.engine.connect() as connection:
             table = "wind_extended"
             units = pd.read_sql(sql=table, con=connection)

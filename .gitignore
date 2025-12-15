@@ -245,3 +245,4 @@ data
 !examples/simple_german.ipynb
 
 src/pstm/generation.py
+out/*
