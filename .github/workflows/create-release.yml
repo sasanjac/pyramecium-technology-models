@@ -68,7 +68,7 @@
             UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
         - name: Create github release
-          uses: softprops/action-gh-release@v2.2.2
+          uses: softprops/action-gh-release@v2.5.0
           with:
             body_path: body.md
             tag_name: ${{ steps.commitizen.outputs.version }}
