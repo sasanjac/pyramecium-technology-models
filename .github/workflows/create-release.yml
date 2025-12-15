@@ -23,7 +23,7 @@
             revoke_token: true
 
         - name: Check out repository
-          uses: actions/checkout@v4.2.2
+          uses: actions/checkout@v6.0.1
           with:
             fetch-depth: 0
             token: ${{ steps.get_bypass_token.outputs.token }}
@@ -42,7 +42,7 @@
           run: gh pr merge --squash --delete-branch --admin
 
         - name: Check out repository
-          uses: actions/checkout@v4.2.2
+          uses: actions/checkout@v6.0.1
           with:
             fetch-depth: 0
             token: ${{ steps.get_bypass_token.outputs.token }}
