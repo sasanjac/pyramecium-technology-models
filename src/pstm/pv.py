@@ -1,5 +1,4 @@
 # Copyright (c) 2018-2025 Sasan Jacob Rasti
-# Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
