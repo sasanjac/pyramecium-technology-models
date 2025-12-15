@@ -36,11 +36,11 @@
       steps:
         - name: Check out repository
           if: ${{ github.event_name != 'pull_request_target' }}
-          uses: actions/checkout@v4.2.2
+          uses: actions/checkout@v6.0.1
 
         - name: Check out repository
           if: ${{ github.event_name == 'pull_request_target' }}
-          uses: actions/checkout@v4.2.2
+          uses: actions/checkout@v6.0.1
           with:
             ref: ${{ github.event.pull_request.head.sha }}
 

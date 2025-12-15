@@ -10,7 +10,7 @@
       runs-on: ubuntu-24.04
       steps:
         - name: Check out repository
-          uses: actions/checkout@v4.2.2
+          uses: actions/checkout@v6.0.1
 
         - name: Check if commit messages are compliant
           uses: webiny/action-conventional-commits@v1.3.0
