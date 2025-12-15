@@ -233,11 +233,11 @@ class Households:
 
     @property
     def baseline_appliances(self) -> cabc.Sequence[Appliances]:
-        return self.baseline_profiles + self.cycle_profiles  # type:ignore[operator, no-any-return]
+        return self.baseline_profiles + self.cycle_profiles  # type:ignore[operator]
 
     @property
     def appliances(self) -> cabc.Sequence[Appliances]:
-        return (  # type:ignore[no-any-return]
+        return (
             self.baseline_profiles  # type:ignore[operator]
             + self.cycle_profiles
             + self.on_off_profiles

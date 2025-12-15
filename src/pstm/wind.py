@@ -7,6 +7,7 @@ import pathlib
 import typing as t
 
 import attrs
+import loguru
 import numpy as np
 import pandas as pd
 import windpowerlib as wpl
@@ -14,10 +15,18 @@ import windpowerlib.modelchain as wmc
 
 from pstm.base import Tech
 
+loguru.logger.disable("windpowerlib")
+
 SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 DEFAULT_TURBINE = wpl.WindTurbine(turbine_type="E-126/4200", hub_height=135)
 DEFAULT_POWER_CURVE_WIND = DEFAULT_TURBINE.power_curve["wind_speed"]
 DEFAULT_POWER_CURVE_POWER = DEFAULT_TURBINE.power_curve["value"] / DEFAULT_TURBINE.power_curve["value"].max()
+
+FLH_REDUCTION_PER_KM = 1.692  # [1] Y. Pflugfelder, H. Kramer, und C. Weber, „A novel approach to generate bias-corrected regional wind infeed timeseries based on reanalysis data“, Applied Energy, Bd. 361, S. 122890, Mai 2024, doi: 10.1016/j.apenergy.2024.122890.
+FULL_LOAD_HOURS_MAX = 4_000
+FULL_LOAD_HOURS_MIN = 1_500
+LAT_BASE = 53.86446  # Elbe mouth, near Hamburg
+LAT_IN_KM = 111.32
 
 MODELCHAIN_DATA = {
     "wind_speed_model": "hellman",
@@ -40,6 +49,8 @@ class Wind(Tech):
     hub_height: float
     turbine_type: str | None = None
     power_inst: float | None = None
+    lat: float
+    lon: float
     power_curve_wind: pd.Series | None = None
     power_curve_power: pd.Series | None = None
     cosphi: float = attrs.field(default=0.9)
@@ -66,6 +77,18 @@ class Wind(Tech):
         self.mc.run_model(weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
         acp = self._resample_as_array(target=-self.mc.power_output, index=index)
+        full_load_hours: float = acp.sum() / self.power_inst * 8760 / acp.size
+        ocean_offset_km = abs(self.lat - LAT_BASE) * LAT_IN_KM
+        flh_reduction = ocean_offset_km * FLH_REDUCTION_PER_KM
+        full_load_hours_corr = full_load_hours - flh_reduction  # Correct full load hours based on distance to coast [1]
+        if not (FULL_LOAD_HOURS_MIN < full_load_hours_corr < FULL_LOAD_HOURS_MAX):
+            loguru.logger.warning(
+                "Strange full load hours: {full_load_hours_corr}",
+                full_load_hours_corr=full_load_hours_corr,
+            )
+
+        acp = acp / full_load_hours * full_load_hours_corr
+
         self.acp.loc[:, ("low", 1)] = acp
         self.acp.loc[:, ("base", 1)] = acp
         acq = acp * np.tan(np.arccos(self.cosphi))
@@ -78,9 +101,11 @@ class Wind(Tech):
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
-class WindFarm(Tech):  # type:ignore[no-any-unimported]
+class WindFarm(Tech):
     powers_inst: list[float]
-    units: cabc.Sequence[wpl.WindTurbine] | None = None  # type:ignore[no-any-unimported]
+    lat: float
+    lon: float
+    units: cabc.Sequence[wpl.WindTurbine] | None = None
     n_units: list[int] | list[None] | None = None
     cosphi: float = attrs.field(default=0.9)
 
@@ -99,6 +124,18 @@ class WindFarm(Tech):  # type:ignore[no-any-unimported]
         self.mc.run_model(weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
         acp = self._resample_as_array(target=-self.mc.power_output, index=index)
+        full_load_hours: float = acp.sum() / sum(self.powers_inst) * 8760 / acp.size
+        ocean_offset_km = abs(self.lat - LAT_BASE) * LAT_IN_KM
+        flh_reduction = ocean_offset_km * FLH_REDUCTION_PER_KM
+        full_load_hours_corr = full_load_hours - flh_reduction  # Correct full load hours based on distance to coast [1]
+        if not (FULL_LOAD_HOURS_MIN < full_load_hours_corr < FULL_LOAD_HOURS_MAX):
+            loguru.logger.warning(
+                "Strange full load hours: {full_load_hours_corr}",
+                full_load_hours_corr=full_load_hours_corr,
+            )
+
+        acp = acp / full_load_hours * full_load_hours_corr
+
         self.acp.loc[:, ("low", 1)] = acp
         self.acp.loc[:, ("base", 1)] = acp
         acq = acp * np.tan(np.arccos(self.cosphi))
@@ -110,7 +147,13 @@ class WindFarm(Tech):  # type:ignore[no-any-unimported]
         return t.cast("pd.Series", self.mc.power_output)
 
     @classmethod
-    def from_power_inst(cls, dates: pd.DatetimeIndex, power_inst: float) -> WindFarm:
+    def from_power_inst(
+        cls,
+        dates: pd.DatetimeIndex,
+        power_inst: float,
+        lat: float,
+        lon: float,
+    ) -> WindFarm:
         dataframe = pd.read_feather(SRC_PATH / "data/wind/turbines.feather")
         data = dataframe.sample()
         unit_data = {
@@ -120,7 +163,7 @@ class WindFarm(Tech):  # type:ignore[no-any-unimported]
         units = [wpl.WindTurbine(**unit_data)]
         n_units = [None]
         powers_inst = [power_inst]
-        return cls(dates=dates, units=units, n_units=n_units, powers_inst=powers_inst)
+        return cls(dates=dates, units=units, n_units=n_units, powers_inst=powers_inst, lat=lat, lon=lon)
 
     @classmethod
     def from_powers_inst_and_hub_heights(
@@ -128,9 +171,11 @@ class WindFarm(Tech):  # type:ignore[no-any-unimported]
         dates: pd.DatetimeIndex,
         powers_inst: list[float],
         hub_heights: list[float],
+        lat: float,
+        lon: float,
     ) -> WindFarm:
         dataframe = pd.read_feather(SRC_PATH / "data/wind/turbines.feather")
-        units: cabc.MutableSequence[wpl.WindTurbine] = []  # type:ignore[no-any-unimported]
+        units: cabc.MutableSequence[wpl.WindTurbine] = []
         for hub_height in hub_heights:
             condition = (dataframe.hub_height - hub_height).abs().argsort()
             data = dataframe.iloc[condition].iloc[0]
@@ -141,4 +186,4 @@ class WindFarm(Tech):  # type:ignore[no-any-unimported]
             units.append(wpl.WindTurbine(**unit_data))
 
         n_units = [None for _ in units]
-        return cls(dates=dates, units=units, n_units=n_units, powers_inst=powers_inst)
+        return cls(dates=dates, units=units, n_units=n_units, powers_inst=powers_inst, lat=lat, lon=lon)

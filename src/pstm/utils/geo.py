@@ -50,7 +50,7 @@ async def get_altitude_from_api(lat: float, lon: float) -> float:
         session.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=aiohttp.ClientTimeout(total=5)) as response,
     ):
         json_body = await response.json()
-        return json_body["results"][0]["altitude"]  # type:ignore[no-any-return]
+        return json_body["results"][0]["altitude"]
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False, unsafe_hash=True)
@@ -99,15 +99,15 @@ class GeoRef:
     def get_voronois(self, lat: float, lon: float) -> cabc.Sequence[int]:
         lat, lon = self._transformer_3035.transform(xx=lat, yy=lon)
         coord = shg.Point(lon, lat)
-        return self._voronoi.distance(coord).sort_values().index.tolist()  # type:ignore[no-any-return]
+        return self._voronoi.distance(coord).sort_values().index.tolist()
 
-    def get_value_for_coord(self, shape: gpd.GeoDataFrame[T], lat: float, lon: float) -> T:  # type: ignore[type-var, no-any-unimported]
+    def get_value_for_coord(self, shape: gpd.GeoDataFrame[T], lat: float, lon: float) -> T:  # type: ignore[type-var]
         lat_, lon_ = self._transformer_3035.transform(xx=lat, yy=lon)
         coord = shg.Point(lon_, lat_)
         data = shape[shape.geometry.contains(coord)].value
         if len(data) == 0:
             logger.warning("Coordinate {lat}, {lon} not found in shape. Using closest distance.", lat=lat, lon=lon)
-            return shape.iloc[shape.distance(coord).argmin()].value  # type:ignore[no-any-return]
+            return shape.iloc[shape.distance(coord).argmin()].value
 
         if len(data) != 1:
             logger.warning(
@@ -116,7 +116,7 @@ class GeoRef:
                 lon=lon,
             )
 
-        return data.to_numpy()[0]  # type:ignore[no-any-return]
+        return data.to_numpy()[0]
 
     def get_weather_gen_file(self, lat: float, lon: float) -> pathlib.Path:
         if self.use_raw_dwd_try_files:
@@ -142,11 +142,11 @@ class GeoRef:
 
         lon, lat = self._transformer_3034.transform(xx=lat, yy=lon)
         closest_index = distance.cdist([(lat, lon)], self._dwd_try_nodes).argmin()
-        return self._dwd_try_files[closest_index]  # type:ignore[no-any-return]
+        return self._dwd_try_files[closest_index]
 
     def get_altitude(self, lat: float, lon: float) -> float:
         lat, lon = self._transformer_25832.transform(xx=lat, yy=lon)
-        return next(iter(self._altitude.sample(((lat, lon),))))[0]  # type:ignore[no-any-return]
+        return next(iter(self._altitude.sample(((lat, lon),))))[0]
 
     def get_roughness_length(self, lat: float, lon: float) -> float:
         clc = self.get_clc(lat=lat, lon=lon)
@@ -181,18 +181,18 @@ class GeoRef:
 
     def _init_zip_codes_file(self) -> None:
         logger.info("Loading zip codes file...")
-        self._zip_codes: gpd.GeoDataFrame[int] = gpd.read_feather(self.zip_codes_file_path).to_crs(epsg=3035)  # type:ignore[no-any-unimported]
+        self._zip_codes: gpd.GeoDataFrame[int] = gpd.read_feather(self.zip_codes_file_path).to_crs(epsg=3035)
         logger.info("Loading zip codes file. Done.")
 
     def _init_altitude_file(self) -> None:
         logger.info("Loading altitude file...")
         crs = rio.CRS.from_epsg(25832)
-        self._altitude: gpd.GeoDataFrame[float] = rio.open(self.altitude_file_path, crs=crs)  # type:ignore[no-any-unimported]
+        self._altitude: gpd.GeoDataFrame[float] = rio.open(self.altitude_file_path, crs=crs)
         logger.info("Loading altitude file. Done.")
 
     def _init_dwd_try_zones_file(self) -> None:
         logger.info("Loading DWD TRY zones file...")
-        self._dwd_try_zones: gpd.GeoDataFrame[int] = gpd.read_feather(self.dwd_try_zones_file_path).to_crs(epsg=3035)  # type:ignore[no-any-unimported]
+        self._dwd_try_zones: gpd.GeoDataFrame[int] = gpd.read_feather(self.dwd_try_zones_file_path).to_crs(epsg=3035)
         logger.info("Loading DWD TRY zones file. Done.")
 
     def _init_dwd_try_files(self) -> None:
@@ -217,7 +217,7 @@ class GeoRef:
             / f"dwd_try_{self.dwd_try_year}_{self.dwd_try_scenario}_index_epsg3034.feather"
         )
         try:
-            self._weather_gen_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)  # type:ignore[no-any-unimported]
+            self._weather_gen_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
         except FileNotFoundError:
             logger.warning("Could not find DWD TRY index file. Some methods may not work properly.")
 
@@ -236,7 +236,7 @@ class GeoRef:
     def _init_newa_index_file(self) -> None:
         logger.info("Loading NEWA index file...")
         index_file_path = self.newa_files_path / f"newa_{self.newa_year}_index_epsg3034.feather"
-        self._newa_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)  # type:ignore[no-any-unimported]
+        self._newa_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
         logger.info("Loading NEWA index file. Done.")
 
     def _init_newa_files(self) -> None:
@@ -253,18 +253,18 @@ class GeoRef:
 
     def _init_clc_file_path(self) -> None:
         logger.info("Loading CLC file...")
-        self._clc: gpd.GeoDataFrame[ValidCLCs] = gpd.read_feather(self.clc_file_path).to_crs(epsg=3035)  # type:ignore[no-any-unimported]
+        self._clc: gpd.GeoDataFrame[ValidCLCs] = gpd.read_feather(self.clc_file_path).to_crs(epsg=3035)
         logger.info("Loading CLC file. Done.")
 
     def _init_time_zones_file(self) -> None:
         logger.info("Loading time zones file...")
-        self._time_zones: gpd.GeoDataFrame[str] = gpd.read_feather(self.time_zones_file_path).to_crs(epsg=3035)  # type:ignore[no-any-unimported]
+        self._time_zones: gpd.GeoDataFrame[str] = gpd.read_feather(self.time_zones_file_path).to_crs(epsg=3035)
         logger.info("Loading time zones file. Done.")
 
     def _init_voronoi_file(self) -> None:
         if self.voronoi_file_path is not None:
             logger.info("Loading voronoi file...")
-            self._voronoi: gpd.GeoDataFrame[str] = gpd.read_feather(self.voronoi_file_path).to_crs(epsg=3035)  # type:ignore[no-any-unimported]
+            self._voronoi: gpd.GeoDataFrame[str] = gpd.read_feather(self.voronoi_file_path).to_crs(epsg=3035)
             logger.info("Loading voronoi file. Done.")
         else:
             logger.info("Skipping voronoi file...")
