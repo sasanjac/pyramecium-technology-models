@@ -1,3 +1,9 @@
+## 1.1.0 (2025-12-15)
+
+### Feat
+
+- add full load hours deprecation (#74)
+
 ## 1.0.6 (2025-02-21)
 
 ### Fix
