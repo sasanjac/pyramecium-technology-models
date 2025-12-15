@@ -23,10 +23,6 @@ from loguru import logger
 from pstm.utils import dates
 
 if t.TYPE_CHECKING:
-    import pathlib
-
-    import numpy.typing as npt
-
     from pstm.utils.geo import GeoRef
 
     type Array1DF = np.ndarray[tuple[int], np.dtype[np.float64]]
@@ -185,7 +181,7 @@ class WeatherGenerator:
         )
 
 
-@dataclass  # noqa: PLR0904
+@dataclass
 class NEWA:
     index: pd.DatetimeIndex
     roughness_length: Array1DF

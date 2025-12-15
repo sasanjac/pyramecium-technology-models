@@ -31,7 +31,7 @@ class ProcessProfiles(OnOffProfiles):
     operation_2_parameter_1: float
     operation_2_parameter_2: float
 
-    def _run(  # noqa: PLR0914
+    def _run(
         self,
         *,
         n_units: int,

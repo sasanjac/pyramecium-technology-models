@@ -57,7 +57,7 @@ class NpEncoder(json.JSONEncoder):
     type=click.Path(exists=True, path_type=pathlib.Path),
     help="Path to the input file.",
 )
-def create(*, input_file: pathlib.Path) -> None:  # noqa: PLR0914
+def create(*, input_file: pathlib.Path) -> None:
     for j in range(6):
         dataframe = pd.read_excel(input_file, sheet_name=f"HH-Typ{j + 1}")
         starts = np.argwhere(dataframe.iloc[:, [0]] == 1)[:, 0]
