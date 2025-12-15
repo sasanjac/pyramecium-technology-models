@@ -48,7 +48,7 @@ class NpEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
 
-        return super().default(obj)  # type:ignore[no-any-return]
+        return super().default(obj)
 
 
 @click.command()
@@ -157,20 +157,20 @@ def create(*, input_file: pathlib.Path) -> None:  # noqa: PLR0914
                 "probability_3": on_off_profiles.iloc[i * 4 + 1, [9]].fillna(0).to_numpy()[0],
                 "probability_4": on_off_profiles.iloc[i * 4 + 1, [10]].fillna(0).to_numpy()[0],
                 "time_on_parameters_1": (
-                    on_off_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_on_parameters_2": (
-                    on_off_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    on_off_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    on_off_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],
+                    on_off_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_on_parameters_3": (
                     on_off_profiles.iloc[i * 4 + 3, [25]].fillna(0).to_numpy()[0],
@@ -225,20 +225,20 @@ def create(*, input_file: pathlib.Path) -> None:  # noqa: PLR0914
                 "probability_3": process_profiles.iloc[i * 4 + 1, [9]].fillna(0).to_numpy()[0],
                 "probability_4": process_profiles.iloc[i * 4 + 1, [10]].fillna(0).to_numpy()[0],
                 "time_on_parameters_1": (
-                    process_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_on_parameters_2": (
-                    process_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    process_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    process_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],
+                    process_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_on_parameters_3": (
                     process_profiles.iloc[i * 4 + 3, [25]].fillna(0).to_numpy()[0],
@@ -289,12 +289,12 @@ def create(*, input_file: pathlib.Path) -> None:  # noqa: PLR0914
                     lighting_profiles.iloc[i * 9 + 1, [12]].fillna(0).to_numpy()[0],
                 ),
                 "lighting_parameters_1": (
-                    lighting_profiles.iloc[i * 9, [13]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 1, [13]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9, [13]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 1, [13]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "lighting_parameters_2": (
-                    lighting_profiles.iloc[i * 9, [14]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 1, [14]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9, [14]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 1, [14]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_on_distribution_types": (
                     lighting_profiles.iloc[i * 9, [17]].fillna("normal").to_numpy()[0],
@@ -303,16 +303,16 @@ def create(*, input_file: pathlib.Path) -> None:  # noqa: PLR0914
                     lighting_profiles.iloc[i * 9, [20]].fillna("normal").to_numpy()[0],
                 ),
                 "time_on_parameters_1": (
-                    lighting_profiles.iloc[i * 9 + 1, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 1, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 1, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 1, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 1, [17]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 1, [18]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 1, [19]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 1, [20]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_on_parameters_2": (
-                    lighting_profiles.iloc[i * 9 + 2, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 2, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 2, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 2, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 2, [17]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 2, [18]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 2, [19]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 2, [20]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_off_distribution_types": (
                     lighting_profiles.iloc[i * 9 + 4, [17]].fillna("normal").to_numpy()[0],
@@ -321,16 +321,16 @@ def create(*, input_file: pathlib.Path) -> None:  # noqa: PLR0914
                     lighting_profiles.iloc[i * 9 + 4, [20]].fillna("normal").to_numpy()[0],
                 ),
                 "time_off_parameters_1": (
-                    lighting_profiles.iloc[i * 9 + 5, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 5, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 5, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 5, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 5, [17]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 5, [18]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 5, [19]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 5, [20]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_off_parameters_2": (
-                    lighting_profiles.iloc[i * 9 + 6, [17]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 6, [18]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 6, [19]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
-                    lighting_profiles.iloc[i * 9 + 6, [20]].fillna(dt.time(0)).to_numpy()[0],  # type:ignore[call-overload]
+                    lighting_profiles.iloc[i * 9 + 6, [17]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 6, [18]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 6, [19]].fillna(dt.time(0)).to_numpy()[0],
+                    lighting_profiles.iloc[i * 9 + 6, [20]].fillna(dt.time(0)).to_numpy()[0],
                 ),
                 "time_on_variations": (
                     lighting_profiles.iloc[i * 9 + 7, [17]].fillna(0).to_numpy()[0],
