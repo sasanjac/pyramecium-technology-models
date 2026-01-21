@@ -13,7 +13,7 @@
           uses: actions/checkout@v6.0.1
 
         - name: Check if commit messages are compliant
-          uses: webiny/action-conventional-commits@v1.3.0
+          uses: webiny/action-conventional-commits@v1.3.1
           with:
             allowed-commit-types: "feat,fix,docs,style,refactor,perf,test,chore,bug,build,ci,bump"
 
