@@ -42,3 +42,24 @@ def test_storage_run() -> None:
     assert storage.self_discharge == SELF_DISCHARGE
     assert storage.storage_type == STORAGE_TYPE
     assert storage.cosphi == COSPHI
+
+
+def test_storage_run_thh() -> None:
+    # High-temperature process-heat storage must populate the `thh` frame,
+    # not the room-heating `thr` frame.
+    storage = Storage(
+        dates=date_range(tz=zi.ZoneInfo("Europe/Berlin"), year=2050),
+        power_inst_in=POWER_INST_IN,
+        power_inst_out=POWER_INST_OUT,
+        capacity=CAPACITY,
+        efficiency_in=EFFICIENCY_IN,
+        efficiency_out=EFFICIENCY_OUT,
+        self_discharge=SELF_DISCHARGE,
+        storage_type=StorageType.THH,
+        cosphi=COSPHI,
+    )
+    storage.run()
+
+    assert (storage.thh["high"] == POWER_INST_IN).all()
+    assert (storage.thh["low"] == -POWER_INST_OUT).all()
+    assert (storage.thr["high"] == 0).all()
