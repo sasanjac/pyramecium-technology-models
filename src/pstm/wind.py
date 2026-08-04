@@ -77,7 +77,7 @@ class Wind(Tech):
         self.mc.run_model(weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
         acp = self._resample_as_array(target=-self.mc.power_output, index=index)
-        full_load_hours: float = acp.sum() / self.power_inst * 8760 / acp.size
+        full_load_hours: float = -acp.sum() / self.power_inst * 8760 / acp.size  # acp is negative (generation)
         ocean_offset_km = abs(self.lat - LAT_BASE) * LAT_IN_KM
         flh_reduction = ocean_offset_km * FLH_REDUCTION_PER_KM
         full_load_hours_corr = full_load_hours - flh_reduction  # Correct full load hours based on distance to coast [1]
@@ -87,13 +87,14 @@ class Wind(Tech):
                 full_load_hours_corr=full_load_hours_corr,
             )
 
+        full_load_hours_corr = max(full_load_hours_corr, 0.0)  # never invert the generation sign
         acp = acp / full_load_hours * full_load_hours_corr
 
-        self.acp.loc[:, ("low", 1)] = acp
-        self.acp.loc[:, ("base", 1)] = acp
+        self.acp.loc[:, ("low", "L1")] = acp
+        self.acp.loc[:, ("base", "L1")] = acp
         acq = acp * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("low", 1)] = acq
-        self.acq.loc[:, ("high", 1)] = -acq
+        self.acq.loc[:, ("low", "L1")] = acq
+        self.acq.loc[:, ("high", "L1")] = -acq
 
     @property
     def ac(self) -> pd.Series:
@@ -124,7 +125,7 @@ class WindFarm(Tech):
         self.mc.run_model(weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
         acp = self._resample_as_array(target=-self.mc.power_output, index=index)
-        full_load_hours: float = acp.sum() / sum(self.powers_inst) * 8760 / acp.size
+        full_load_hours: float = -acp.sum() / sum(self.powers_inst) * 8760 / acp.size  # acp is negative (generation)
         ocean_offset_km = abs(self.lat - LAT_BASE) * LAT_IN_KM
         flh_reduction = ocean_offset_km * FLH_REDUCTION_PER_KM
         full_load_hours_corr = full_load_hours - flh_reduction  # Correct full load hours based on distance to coast [1]
@@ -134,13 +135,14 @@ class WindFarm(Tech):
                 full_load_hours_corr=full_load_hours_corr,
             )
 
+        full_load_hours_corr = max(full_load_hours_corr, 0.0)  # never invert the generation sign
         acp = acp / full_load_hours * full_load_hours_corr
 
-        self.acp.loc[:, ("low", 1)] = acp
-        self.acp.loc[:, ("base", 1)] = acp
+        self.acp.loc[:, ("low", "L1")] = acp
+        self.acp.loc[:, ("base", "L1")] = acp
         acq = acp * np.tan(np.arccos(self.cosphi))
-        self.acq.loc[:, ("low", 1)] = acq
-        self.acq.loc[:, ("high", 1)] = -acq
+        self.acq.loc[:, ("low", "L1")] = acq
+        self.acq.loc[:, ("high", "L1")] = -acq
 
     @property
     def ac(self) -> pd.Series:

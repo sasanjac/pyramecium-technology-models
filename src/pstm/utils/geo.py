@@ -140,8 +140,10 @@ class GeoRef:
             msg = "`use_raw_dwd_try_files` is set to `false`. Either set to `true` or use `get_weather_gen_file`."
             raise RuntimeError(msg)
 
-        lon, lat = self._transformer_3034.transform(xx=lat, yy=lon)
-        closest_index = distance.cdist([(lat, lon)], self._dwd_try_nodes).argmin()
+        # EPSG:3034 axis order is (Northing, Easting); _dwd_try_nodes are stored as (Hochwert, Rechtswert)
+        # = (Northing, Easting), so the query point must use the same order.
+        northing, easting = self._transformer_3034.transform(xx=lat, yy=lon)
+        closest_index = distance.cdist([(northing, easting)], self._dwd_try_nodes).argmin()
         return self._dwd_try_files[closest_index]
 
     def get_altitude(self, lat: float, lon: float) -> float:

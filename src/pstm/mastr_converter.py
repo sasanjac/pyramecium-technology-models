@@ -39,14 +39,14 @@ class MaStRCatalog:
         values = self._catalog[condition]["Id"].to_numpy(dtype=np.int64).flatten()
         return int(values[0]) if values.size > 0 else -1
 
-    def get_value(self, code: float) -> float | None:
+    def get_value(self, code: float) -> str | None:
         try:
             condition = self._catalog["Id"] == int(code)
         except ValueError:
             return None
         else:
-            values = self._catalog[condition]["Wert"].to_numpy(dtype=np.int64).flatten()[0]
-            return int(values[0]) if values.size > 0 else -1
+            values = self._catalog[condition]["Wert"].to_numpy()
+            return str(values[0]) if values.size > 0 else None
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -57,7 +57,7 @@ class MaStRConverter:
     conds_extra: list[tuple[str, ...]] = attrs.field(factory=list)
     n_files: int | None = None
 
-    def __post_init__(self) -> None:
+    def __attrs_post_init__(self) -> None:
         if self.n_files is None:
             self.dataframe = import_xml(self.path)
         else:

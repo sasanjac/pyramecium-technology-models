@@ -48,10 +48,14 @@ class MaStR:
 
     def installed_wind_farms(self, lat: float, lon: float, power_installed: float) -> list[WindFarm]:
         voronois = self.georef.get_voronois(lat=lat, lon=lon)
+        installed_units = None
         for voronoi in voronois:
             installed_units = self.units_wind[self.units_wind["voronoi"] == voronoi]
             if not installed_units.empty:
                 break
+
+        if installed_units is None or installed_units.empty:
+            return []
 
         power_installed_current = installed_units.Nettonennleistung.sum() * 1e3  # kW in W
         unit_factor = math.ceil(power_installed * 1e6 / power_installed_current)

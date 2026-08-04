@@ -116,7 +116,7 @@ class Driver:
 
     @classmethod
     def from_random(cls) -> Driver:
-        profile: Profile = GEN.integers(low=1, high=12)  # type: ignore[assignment]
+        profile: Profile = GEN.integers(low=1, high=13)  # type: ignore[assignment]  # high is exclusive; profiles are 1..12
         return cls.from_profile(profile=profile)
 
     @classmethod
@@ -173,22 +173,28 @@ class EVSystem(Tech):
         return 0
 
     def power(self, td: TypeDay) -> np.ndarray:
-        rv = np.zeros(24 * 4)
+        n_slots = 24 * 4
+        rv = np.zeros(n_slots)
         energy = self.energy(td)
-        csp = 24 * 4 + 1
-        while csp > 24 * 4:
+        csp = n_slots
+        while csp >= n_slots:
             csp = int(self.charging_start_point(td) * 4 // 1)
 
         n_full = int((energy * 4) // self.car.charging_power)
         last_power = ((energy * 4) / self.car.charging_power - n_full) * self.car.charging_power
-        rv[csp : csp + n_full] = self.car.charging_power
-        rv[csp + n_full] = last_power
+        rv[csp : min(csp + n_full, n_slots)] = self.car.charging_power
+        if csp + n_full < n_slots:  # the partial slot may overflow the day; clip it
+            rv[csp + n_full] = last_power
+
         return rv
 
     def run(self) -> None:
         index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
         type_day_start = int(self.dates.weekday[0])
-        tds: list[TypeDay] = ["WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(365)]
+        n_days = len(index) // (24 * 4)  # 365 or 366 (leap year); avoid index-length mismatch
+        tds: list[TypeDay] = [
+            "WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(n_days)
+        ]
         acp = pd.Series(np.concatenate([self.power(td) for td in tds]), index=index, name="p_el")
         self.acp.loc[:, "high"] = acp.resample(self.dates.freq).mean()
 

@@ -47,8 +47,8 @@ class Storage(Tech):
             self.thl.high = self.power_inst_in
             self.thl.low = -self.power_inst_out
         elif self.storage_type == StorageType.THH:
-            self.thr.high = self.power_inst_in
-            self.thr.low = -self.power_inst_out
+            self.thh.high = self.power_inst_in
+            self.thh.low = -self.power_inst_out
         elif self.storage_type == StorageType.CH4:
             self.ch4.high = self.power_inst_in
             self.ch4.low = -self.power_inst_out

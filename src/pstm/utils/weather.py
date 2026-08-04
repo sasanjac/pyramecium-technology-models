@@ -134,8 +134,9 @@ class WeatherGenerator:
         weather.index = index
         if freq != dt.timedelta(hours=1):
             new_index = dates.date_range(tz, freq, year=year)
-            weather = weather.resample(freq).mean()
-            weather = weather.reindex(new_index, method="ffill")
+            # resample().mean() leaves the newly created sub-hourly bins as NaN; reindex(method="ffill")
+            # cannot fill them because the labels already exist, so forward-fill the values explicitly.
+            weather = weather.resample(freq).mean().reindex(new_index).ffill()
 
         roughness_length = georef.get_roughness_length(lat, lon)
         return WeatherGenerator(
@@ -475,7 +476,7 @@ class NEWA:
     ) -> NEWA:
         url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
         response = requests.get(url, timeout=600)
-        with tempfile.NamedTemporaryFile(delete=False) as buf:
+        with tempfile.NamedTemporaryFile(delete_on_close=False) as buf:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 if chunk:
                     buf.write(chunk)

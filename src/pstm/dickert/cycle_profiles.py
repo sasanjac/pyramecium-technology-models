@@ -9,7 +9,7 @@ import attrs
 import numpy as np
 import numpy.typing as npt
 from loguru import logger
-from numpy.core.numeric import ones
+from numpy import ones
 
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
@@ -184,10 +184,13 @@ class CycleProfiles(OperationProfiles):
 
             if self.operation_variation != 0:
                 shift = self.operation_variation * scatter_init[0, unit]
-                step = shift * np.sin(
-                    2 * np.pi * (steps[:, np.newaxis] / step_max + 3 / 4 - 28 / Constants.DAYS_PER_YEAR),
-                )
-                period_length[steps, unit] += step
+                step = (
+                    shift
+                    * np.sin(
+                        2 * np.pi * (steps / step_max + 3 / 4 - 28 / Constants.DAYS_PER_YEAR),
+                    )
+                ).astype(np.int64)
+                operation_length[steps, unit] += step
 
         operation_length[operation_length <= 0] = 1
         return operation_length

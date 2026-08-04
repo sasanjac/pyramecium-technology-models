@@ -41,7 +41,7 @@ class SeriesDemand(Tech):
         self.thh.high = thh
         self.thh.base = thh
         self.thh.low = thh
-        acq = self.series_acp * self.factor_acp if self.series_acq is not None else acp * np.tan(np.arccos(self.cosphi))
+        acq = self.series_acq * self.factor_acq if self.series_acq is not None else acp * np.tan(np.arccos(self.cosphi))
 
         self.acq.high = acq
         self.acq.base = acq
