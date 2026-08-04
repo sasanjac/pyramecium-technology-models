@@ -76,6 +76,7 @@ def convert(
                 if output_file.exists():
                     continue
 
+                output_file.parent.mkdir(parents=True, exist_ok=True)
                 wg = WeatherGenerator.from_dwd(
                     file_path,
                     georef=georef,

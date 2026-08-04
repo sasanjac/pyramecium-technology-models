@@ -265,7 +265,7 @@ def create(*, input_file: pathlib.Path) -> None:
             for i in range(n)
         ]
         lighting_profiles = dataframe.iloc[starts[4] : ends[4] + 1]
-        n = len(process_profiles) // 9
+        n = len(lighting_profiles) // 9
         lighting_profiles_dc = [
             {
                 "description": lighting_profiles.iloc[i * 9, [1]].fillna(0).to_numpy()[0],
