@@ -22,11 +22,8 @@ DEFAULT_TURBINE = wpl.WindTurbine(turbine_type="E-126/4200", hub_height=135)
 DEFAULT_POWER_CURVE_WIND = DEFAULT_TURBINE.power_curve["wind_speed"]
 DEFAULT_POWER_CURVE_POWER = DEFAULT_TURBINE.power_curve["value"] / DEFAULT_TURBINE.power_curve["value"].max()
 
-FLH_REDUCTION_PER_KM = 1.692  # [1] Y. Pflugfelder, H. Kramer, und C. Weber, „A novel approach to generate bias-corrected regional wind infeed timeseries based on reanalysis data“, Applied Energy, Bd. 361, S. 122890, Mai 2024, doi: 10.1016/j.apenergy.2024.122890.
-FULL_LOAD_HOURS_MAX = 4_000
+FULL_LOAD_HOURS_MAX = 4_500
 FULL_LOAD_HOURS_MIN = 1_500
-LAT_BASE = 53.86446  # Elbe mouth, near Hamburg
-LAT_IN_KM = 111.32
 
 MODELCHAIN_DATA = {
     "wind_speed_model": "hellman",
@@ -54,6 +51,7 @@ class Wind(Tech):
     power_curve_wind: pd.Series | None = None
     power_curve_power: pd.Series | None = None
     cosphi: float = attrs.field(default=0.9)
+    modelchain_data: dict[str, t.Any] = attrs.field(factory=lambda: dict(MODELCHAIN_DATA))
 
     def __attrs_post_init__(self) -> None:
         if self.turbine_type is not None:
@@ -71,24 +69,18 @@ class Wind(Tech):
         else:
             raise MissingArgumentsError
 
-        self.mc = wmc.ModelChain(self.turbine, **MODELCHAIN_DATA)
+        self.mc = wmc.ModelChain(self.turbine, **self.modelchain_data)
 
     def run(self, weather: pd.DataFrame) -> None:
         self.mc.run_model(weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
         acp = self._resample_as_array(target=-self.mc.power_output, index=index)
         full_load_hours: float = -acp.sum() / self.power_inst * 8760 / acp.size  # acp is negative (generation)
-        ocean_offset_km = abs(self.lat - LAT_BASE) * LAT_IN_KM
-        flh_reduction = ocean_offset_km * FLH_REDUCTION_PER_KM
-        full_load_hours_corr = full_load_hours - flh_reduction  # Correct full load hours based on distance to coast [1]
-        if not (FULL_LOAD_HOURS_MIN < full_load_hours_corr < FULL_LOAD_HOURS_MAX):
+        if not (FULL_LOAD_HOURS_MIN < full_load_hours < FULL_LOAD_HOURS_MAX):
             loguru.logger.warning(
-                "Strange full load hours: {full_load_hours_corr}",
-                full_load_hours_corr=full_load_hours_corr,
+                "Strange full load hours: {full_load_hours}",
+                full_load_hours=full_load_hours,
             )
-
-        full_load_hours_corr = max(full_load_hours_corr, 0.0)  # never invert the generation sign
-        acp = acp / full_load_hours * full_load_hours_corr
 
         self.acp.loc[:, ("low", "L1")] = acp
         self.acp.loc[:, ("base", "L1")] = acp
@@ -126,17 +118,11 @@ class WindFarm(Tech):
         index = t.cast("pd.DatetimeIndex", weather.index)
         acp = self._resample_as_array(target=-self.mc.power_output, index=index)
         full_load_hours: float = -acp.sum() / sum(self.powers_inst) * 8760 / acp.size  # acp is negative (generation)
-        ocean_offset_km = abs(self.lat - LAT_BASE) * LAT_IN_KM
-        flh_reduction = ocean_offset_km * FLH_REDUCTION_PER_KM
-        full_load_hours_corr = full_load_hours - flh_reduction  # Correct full load hours based on distance to coast [1]
-        if not (FULL_LOAD_HOURS_MIN < full_load_hours_corr < FULL_LOAD_HOURS_MAX):
+        if not (FULL_LOAD_HOURS_MIN < full_load_hours < FULL_LOAD_HOURS_MAX):
             loguru.logger.warning(
-                "Strange full load hours: {full_load_hours_corr}",
-                full_load_hours_corr=full_load_hours_corr,
+                "Strange full load hours: {full_load_hours}",
+                full_load_hours=full_load_hours,
             )
-
-        full_load_hours_corr = max(full_load_hours_corr, 0.0)  # never invert the generation sign
-        acp = acp / full_load_hours * full_load_hours_corr
 
         self.acp.loc[:, ("low", "L1")] = acp
         self.acp.loc[:, ("base", "L1")] = acp

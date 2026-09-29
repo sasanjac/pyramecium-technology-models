@@ -152,8 +152,16 @@ class TestWindRun:
         assert np.any(wind.acq["low"]["L1"].values != 0)
 
 
-class TestWindLatitudeCorrection:
-    """Test Wind full load hour latitude correction."""
+class TestWindSiteIndependence:
+    """The output depends on the weather at the site, not on its latitude.
+
+    The former full-load-hour correction subtracted 1.692 h per km of latitude
+    distance to the Elbe mouth. It took one coefficient of the multilinear
+    regression of Pflugfelder, Kramer and Weber (Applied Energy 361, 2024)
+    without its intercept and the other regressors, with the opposite sign of
+    the distance effect, and applied an ERA5-calibrated bias to a TRY-based
+    model chain. It is removed.
+    """
 
     @pytest.fixture
     def dates(self) -> pd.DatetimeIndex:
@@ -181,10 +189,10 @@ class TestWindLatitudeCorrection:
         ])
         return pd.DataFrame(data, index=dates, columns=columns)
 
-    def test_coastal_wind_higher_output(
+    def test_identical_weather_gives_identical_output(
         self, dates: pd.DatetimeIndex, weather: pd.DataFrame
     ) -> None:
-        """Test that coastal (northern) wind has higher correction."""
+        """Two sites under the same weather generate the same energy."""
         # Coastal location (near Elbe mouth)
         wind_coastal = Wind(
             dates=dates,
@@ -207,12 +215,30 @@ class TestWindLatitudeCorrection:
         wind_coastal.run(weather)
         wind_inland.run(weather)
 
-        # acp is negative for generation. Under identical weather, the coastal
-        # site is closer to the reference coast, so its full-load-hour reduction
-        # is smaller and it must generate MORE energy (more negative sum) than
-        # the inland site. This guards against the FLH-correction sign bug.
         coastal_generation = wind_coastal.acp["low"]["L1"].sum()
         inland_generation = wind_inland.acp["low"]["L1"].sum()
         assert coastal_generation < 0
-        assert inland_generation < 0
-        assert coastal_generation < inland_generation
+        assert coastal_generation == pytest.approx(inland_generation, rel=1e-12)
+
+
+class TestWindModelChainData:
+    """The model chain of a turbine follows its ``modelchain_data``."""
+
+    def test_default_is_the_hellman_chain(self) -> None:
+        wind = Wind(dates=date_range(tz=TZ, year=2023)[:4], hub_height=100, power_inst=2e6, lat=54.8, lon=13.8)
+        assert wind.mc.wind_speed_model == "hellman"
+
+    def test_a_multi_height_chain_interpolates_between_levels(self) -> None:
+        from pstm.wind import MODELCHAIN_DATA
+
+        dates = date_range(tz=TZ, year=2023)[:4]
+        data = {**MODELCHAIN_DATA, "wind_speed_model": "log_interpolation_extrapolation"}
+        wind = Wind(dates=dates, hub_height=100, power_inst=2e6, lat=54.8, lon=13.8, modelchain_data=data)
+        assert wind.mc.wind_speed_model == "log_interpolation_extrapolation"
+        columns = pd.MultiIndex.from_tuples(
+            [("wind_speed", 75), ("wind_speed", 150), ("temperature", 75), ("pressure", 75), ("roughness_length", 0)],
+        )
+        weather = pd.DataFrame([[6.0, 8.0, 283.0, 101_000.0, 0.1]] * 4, index=dates, columns=columns)
+        v_hub = np.asarray(wind.mc.wind_speed_hub(weather), dtype=float)
+        expected = 6.0 + (8.0 - 6.0) * np.log(100 / 75) / np.log(150 / 75)
+        np.testing.assert_allclose(v_hub, expected)
