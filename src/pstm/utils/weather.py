@@ -29,6 +29,7 @@ if t.TYPE_CHECKING:
 
 
 NEWA_BASE_FILE_NAME = "NEWA_WEATHER_{lat}-{lon}_{year}.nc"
+NEWA_HEIGHTS = (50.0, 75.0, 100.0, 150.0, 200.0, 250.0, 500.0)  # m, the levels of NEWA_BASE_URL
 NEWA_BASE_FEATHER_FILE_NAME = "NEWA_WEATHER_{lat:.3f}-{lon:.3f}_{year}.feather"
 NEWA_BASE_PATH = pathlib.Path(__file__).parent.parent.parent.parent / "data" / "weather" / "newa"
 NEWA_BASE_URL = "https://wps.neweuropeanwindatlas.eu/api/mesoscale-ts/v1/get-data-point?latitude={lat}&longitude={lon}&height=50&height=75&height=100&height=150&height=200&height=250&height=500&variable=HGT&variable=LU_INDEX&variable=LANDMASK&variable=ZNT&variable=T2&variable=WS&variable=T&variable=PD&dt_start={year}-01-01T00:00:00&dt_stop={year2}-01-01T00:00:00"
@@ -430,40 +431,41 @@ class NEWA:
         )
 
     def to_feather(self, file_path: pathlib.Path) -> None:
-        dataframe = pd.DataFrame(data=self.data_feather, columns=self.columns_feather, index=self.index)
-        idx = dataframe.index
-        _dataframe = dataframe.reset_index()
-        _dataframe.index = idx
-        _dataframe.to_feather(file_path)
+        """Write the series with the index as the column ``time``, which :meth:`from_feather` restores."""
+        dataframe = pd.DataFrame(data=self.data_feather, columns=self.columns_feather)
+        dataframe.insert(0, "time", self.index)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        dataframe.to_feather(file_path)
 
     @classmethod
     def from_feather(cls, file_path: pathlib.Path) -> NEWA:
         dataframe = pd.read_feather(file_path)
+        dataframe = dataframe.set_index("time").rename_axis(None)
         return cls(
             index=t.cast("pd.DatetimeIndex", dataframe.index),
-            roughness_length=dataframe["roughness_length"].to_numpy(),
-            wind_speed_50=t.cast("Array1DF", dataframe["wind_speed_50"]),
-            wind_speed_75=t.cast("Array1DF", dataframe["wind_speed_75"]),
-            wind_speed_100=t.cast("Array1DF", dataframe["wind_speed_100"]),
-            wind_speed_150=t.cast("Array1DF", dataframe["wind_speed_150"]),
-            wind_speed_200=t.cast("Array1DF", dataframe["wind_speed_200"]),
-            wind_speed_250=t.cast("Array1DF", dataframe["wind_speed_250"]),
-            wind_speed_500=t.cast("Array1DF", dataframe["wind_speed_500"]),
-            wind_power_density_50=t.cast("Array1DF", dataframe["wind_power_density_50"]),
-            wind_power_density_75=t.cast("Array1DF", dataframe["wind_power_density_75"]),
-            wind_power_density_100=t.cast("Array1DF", dataframe["wind_power_density_100"]),
-            wind_power_density_150=t.cast("Array1DF", dataframe["wind_power_density_150"]),
-            wind_power_density_200=t.cast("Array1DF", dataframe["wind_power_density_200"]),
-            wind_power_density_250=t.cast("Array1DF", dataframe["wind_power_density_250"]),
-            wind_power_density_500=t.cast("Array1DF", dataframe["wind_power_density_500"]),
-            temperature_2=t.cast("Array1DF", dataframe["temperature_2"]),
-            temperature_50=t.cast("Array1DF", dataframe["temperature_50"]),
-            temperature_75=t.cast("Array1DF", dataframe["temperature_75"]),
-            temperature_100=t.cast("Array1DF", dataframe["temperature_100"]),
-            temperature_150=t.cast("Array1DF", dataframe["temperature_150"]),
-            temperature_200=t.cast("Array1DF", dataframe["temperature_200"]),
-            temperature_250=t.cast("Array1DF", dataframe["temperature_250"]),
-            temperature_500=t.cast("Array1DF", dataframe["temperature_500"]),
+            roughness_length=dataframe["roughness_length_0"].to_numpy(),
+            wind_speed_50=t.cast("Array1DF", dataframe["wind_speed_50"].to_numpy()),
+            wind_speed_75=t.cast("Array1DF", dataframe["wind_speed_75"].to_numpy()),
+            wind_speed_100=t.cast("Array1DF", dataframe["wind_speed_100"].to_numpy()),
+            wind_speed_150=t.cast("Array1DF", dataframe["wind_speed_150"].to_numpy()),
+            wind_speed_200=t.cast("Array1DF", dataframe["wind_speed_200"].to_numpy()),
+            wind_speed_250=t.cast("Array1DF", dataframe["wind_speed_250"].to_numpy()),
+            wind_speed_500=t.cast("Array1DF", dataframe["wind_speed_500"].to_numpy()),
+            wind_power_density_50=t.cast("Array1DF", dataframe["wind_power_density_50"].to_numpy()),
+            wind_power_density_75=t.cast("Array1DF", dataframe["wind_power_density_75"].to_numpy()),
+            wind_power_density_100=t.cast("Array1DF", dataframe["wind_power_density_100"].to_numpy()),
+            wind_power_density_150=t.cast("Array1DF", dataframe["wind_power_density_150"].to_numpy()),
+            wind_power_density_200=t.cast("Array1DF", dataframe["wind_power_density_200"].to_numpy()),
+            wind_power_density_250=t.cast("Array1DF", dataframe["wind_power_density_250"].to_numpy()),
+            wind_power_density_500=t.cast("Array1DF", dataframe["wind_power_density_500"].to_numpy()),
+            temperature_2=t.cast("Array1DF", dataframe["temperature_2"].to_numpy()),
+            temperature_50=t.cast("Array1DF", dataframe["temperature_50"].to_numpy()),
+            temperature_75=t.cast("Array1DF", dataframe["temperature_75"].to_numpy()),
+            temperature_100=t.cast("Array1DF", dataframe["temperature_100"].to_numpy()),
+            temperature_150=t.cast("Array1DF", dataframe["temperature_150"].to_numpy()),
+            temperature_200=t.cast("Array1DF", dataframe["temperature_200"].to_numpy()),
+            temperature_250=t.cast("Array1DF", dataframe["temperature_250"].to_numpy()),
+            temperature_500=t.cast("Array1DF", dataframe["temperature_500"].to_numpy()),
         )
 
     @classmethod
@@ -475,12 +477,14 @@ class NEWA:
         tz: dt.tzinfo,
     ) -> NEWA:
         url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
-        response = requests.get(url, timeout=600)
-        with tempfile.NamedTemporaryFile(delete_on_close=False) as buf:
+        response = requests.get(url, timeout=600, stream=True)
+        response.raise_for_status()
+        with tempfile.NamedTemporaryFile(suffix=".nc", delete_on_close=False) as buf:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 if chunk:
                     buf.write(chunk)
 
+            buf.flush()
             return cls.from_nc(file_path=buf.name, tz=tz)
 
     @classmethod
@@ -520,6 +524,7 @@ class NEWA:
                     if chunk:
                         buf.write(chunk)
 
+                buf.flush()
                 logger.trace("Converting NEWA data to feather format")
                 data = cls.from_nc(file_path=buf.name, tz=tz)
                 data.to_feather(file_path=file_path)
@@ -527,41 +532,57 @@ class NEWA:
 
     @classmethod
     def from_nc(cls, file_path: pathlib.Path | str, tz: dt.tzinfo) -> NEWA:
-        data = netCDF4.Dataset(file_path, mode="r")
+        """Read a NEWA mesoscale time-series point file.
 
-        index = pd.date_range(
-            start=data.temporalExtentMinimum,
-            end=data.temporalExtentMaximum,
-            periods=data.dimensions["time"].size + 1,
-            tz=tz,
-            inclusive="left",
-        )
+        The ``time`` variable counts minutes in UTC, so the index is built from
+        it in UTC and converted to ``tz``.  The API includes the instant of
+        ``dt_stop``, which belongs to the next year, and the files written in
+        2024 end one step before it.  Every step at or after
+        ``temporalExtentMaximum`` is dropped, so both give the same index.
+        """
+        data = netCDF4.Dataset(file_path, mode="r")
+        heights = [float(h) for h in np.asarray(data.variables["height"][:])]
+        if heights != list(NEWA_HEIGHTS):
+            data.close()
+            msg = f"NEWA file {file_path} holds the heights {heights}, expected {list(NEWA_HEIGHTS)}."
+            raise ValueError(msg)
+
+        time = data.variables["time"]
+        stamps = netCDF4.num2date(time[:], units=time.units, only_use_cftime_datetimes=False)
+        index_utc = pd.DatetimeIndex([pd.Timestamp(str(s)) for s in stamps]).tz_localize("UTC")
+        stop = pd.Timestamp(data.temporalExtentMaximum).tz_localize("UTC")
+        keep = np.asarray(index_utc < stop)
+        index = t.cast("pd.DatetimeIndex", index_utc[keep].tz_convert(tz))
+
+        def var(name: str, level: int | None = None) -> Array1DF:
+            values = data.variables[name][:] if level is None else data.variables[name][:, level]
+            return t.cast("Array1DF", np.asarray(values, dtype=np.float64)[keep])
 
         newa = cls(
             index=index,
-            roughness_length=data.variables["ZNT"][:].data,
-            wind_speed_50=data.variables["WS"][:, 0].data,
-            wind_speed_75=data.variables["WS"][:, 1].data,
-            wind_speed_100=data.variables["WS"][:, 2].data,
-            wind_speed_150=data.variables["WS"][:, 3].data,
-            wind_speed_200=data.variables["WS"][:, 4].data,
-            wind_speed_250=data.variables["WS"][:, 5].data,
-            wind_speed_500=data.variables["WS"][:, 6].data,
-            wind_power_density_50=data.variables["PD"][:, 0].data,
-            wind_power_density_75=data.variables["PD"][:, 1].data,
-            wind_power_density_100=data.variables["PD"][:, 2].data,
-            wind_power_density_150=data.variables["PD"][:, 3].data,
-            wind_power_density_200=data.variables["PD"][:, 4].data,
-            wind_power_density_250=data.variables["PD"][:, 5].data,
-            wind_power_density_500=data.variables["PD"][:, 6].data,
-            temperature_2=data.variables["T2"][:].data,
-            temperature_50=data.variables["T"][:, 0].data,
-            temperature_75=data.variables["T"][:, 1].data,
-            temperature_100=data.variables["T"][:, 2].data,
-            temperature_150=data.variables["T"][:, 3].data,
-            temperature_200=data.variables["T"][:, 4].data,
-            temperature_250=data.variables["T"][:, 5].data,
-            temperature_500=data.variables["T"][:, 6].data,
+            roughness_length=var("ZNT"),
+            wind_speed_50=var("WS", 0),
+            wind_speed_75=var("WS", 1),
+            wind_speed_100=var("WS", 2),
+            wind_speed_150=var("WS", 3),
+            wind_speed_200=var("WS", 4),
+            wind_speed_250=var("WS", 5),
+            wind_speed_500=var("WS", 6),
+            wind_power_density_50=var("PD", 0),
+            wind_power_density_75=var("PD", 1),
+            wind_power_density_100=var("PD", 2),
+            wind_power_density_150=var("PD", 3),
+            wind_power_density_200=var("PD", 4),
+            wind_power_density_250=var("PD", 5),
+            wind_power_density_500=var("PD", 6),
+            temperature_2=var("T2"),
+            temperature_50=var("T", 0),
+            temperature_75=var("T", 1),
+            temperature_100=var("T", 2),
+            temperature_150=var("T", 3),
+            temperature_200=var("T", 4),
+            temperature_250=var("T", 5),
+            temperature_500=var("T", 6),
         )
         data.close()
         return newa
