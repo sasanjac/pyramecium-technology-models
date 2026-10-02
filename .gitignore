@@ -246,3 +246,8 @@ data
 
 src/pstm/generation.py
 out/*
+
+# local files of the author and of Claude sessions
+.DS_Store
+.claude/
+Claude outputs/
