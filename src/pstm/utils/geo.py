@@ -43,8 +43,6 @@ if t.TYPE_CHECKING:
 
     from pstm.utils.roughness_lengths import ValidCLCs
 
-    T = t.TypeVar("T")
-
 
 class DwdTryScenario(enum.StrEnum):
     """Scenario of the DWD test reference years."""
@@ -92,7 +90,7 @@ class GeoRef:
     voronoi_file_path: Option[pathlib.Path] = attrs.field(default=NONE, hash=True)
 
     def get_zip_code(self, lat: float, lon: float) -> int:
-        return self.get_value_for_coord(self._zip_codes, lat=lat, lon=lon)
+        return t.cast("int", self.get_value_for_coord(self._zip_codes, lat=lat, lon=lon))
 
     def get_zip_code_center(self, zip_code: str) -> tuple[float, float]:
         matching_zip_codes = self._zip_codes.value == str(zip_code)
@@ -101,7 +99,7 @@ class GeoRef:
         return self._transformer_3035_t.transform(xx=point.y, yy=point.x)
 
     def get_dwd_try_zone(self, lat: float, lon: float) -> str:
-        zone: int = self.get_value_for_coord(self._dwd_try_zones, lat=lat, lon=lon)
+        zone = t.cast("int", self.get_value_for_coord(self._dwd_try_zones, lat=lat, lon=lon))
         return f"TRY{zone:02d}"
 
     def get_weather_gen_index(self, lat: float, lon: float) -> Result[int, FileNotFoundError]:
@@ -111,27 +109,27 @@ class GeoRef:
             ``Err`` if the DWD TRY index file was not found on ``__enter__``.
         """
         return self._weather_gen_index.ok_or(FileNotFoundError("Could not find DWD TRY index file.")).map(
-            lambda shape: self.get_value_for_coord(shape, lat=lat, lon=lon),
+            lambda shape: t.cast("int", self.get_value_for_coord(shape, lat=lat, lon=lon)),
         )
 
     def get_newa_index(self, lat: float, lon: float) -> int:
-        return self.get_value_for_coord(self._newa_index, lat=lat, lon=lon)
+        return t.cast("int", self.get_value_for_coord(self._newa_index, lat=lat, lon=lon))
 
     def get_voronoi(self, lat: float, lon: float) -> int:
-        return self.get_value_for_coord(self._voronoi, lat=lat, lon=lon)
+        return t.cast("int", self.get_value_for_coord(self._voronoi, lat=lat, lon=lon))
 
     def get_voronois(self, lat: float, lon: float) -> cabc.Sequence[int]:
         lat, lon = self._transformer_3035.transform(xx=lat, yy=lon)
         coord = shg.Point(lon, lat)
         return t.cast("cabc.Sequence[int]", self._voronoi.distance(coord).sort_values().index.tolist())
 
-    def get_value_for_coord(self, shape: gpd.GeoDataFrame[T], lat: float, lon: float) -> T:  # type: ignore[type-var]
+    def get_value_for_coord(self, shape: gpd.GeoDataFrame, lat: float, lon: float) -> t.Any:  # ruff: ignore[any-type] - the value column has a type per shape
         lat_, lon_ = self._transformer_3035.transform(xx=lat, yy=lon)
         coord = shg.Point(lon_, lat_)
         data = shape[shape.geometry.contains(coord)].value
         if len(data) == 0:
             logger.warning("Coordinate {lat}, {lon} not found in shape. Using closest distance.", lat=lat, lon=lon)
-            return t.cast("T", shape.iloc[shape.distance(coord).argmin()].value)
+            return shape.iloc[shape.distance(coord).argmin()].value
 
         if len(data) != 1:
             logger.warning(
@@ -140,7 +138,7 @@ class GeoRef:
                 lon=lon,
             )
 
-        return t.cast("T", data.to_numpy()[0])
+        return data.to_numpy()[0]
 
     def get_weather_gen_file(self, lat: float, lon: float) -> Result[pathlib.Path, RuntimeError | FileNotFoundError]:
         """Weather generator file closest to ``lat``, ``lon``.
@@ -203,10 +201,10 @@ class GeoRef:
         return random.uniform(min_length, max_length)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
 
     def get_clc(self, lat: float, lon: float) -> ValidCLCs:
-        return self.get_value_for_coord(self._clc, lat=lat, lon=lon)
+        return t.cast("ValidCLCs", self.get_value_for_coord(self._clc, lat=lat, lon=lon))
 
     def get_time_zone(self, lat: float, lon: float) -> dt.tzinfo:
-        tz_str: str = self.get_value_for_coord(self._time_zones, lat=lat, lon=lon)
+        tz_str = t.cast("str", self.get_value_for_coord(self._time_zones, lat=lat, lon=lon))
         return zi.ZoneInfo(tz_str)
 
     def __enter__(self) -> t.Self:
@@ -215,7 +213,7 @@ class GeoRef:
         self._init_dwd_try_zones_file()
         if self.use_raw_dwd_try_files:
             self._init_dwd_try_files()
-            self._weather_gen_index: Option[gpd.GeoDataFrame[int]] = NONE
+            self._weather_gen_index: Option[gpd.GeoDataFrame] = NONE
         else:
             self._init_weather_gen_index_file()
 
@@ -230,18 +228,18 @@ class GeoRef:
 
     def _init_zip_codes_file(self) -> None:
         logger.info("Loading zip codes file...")
-        self._zip_codes: gpd.GeoDataFrame[int] = gpd.read_feather(self.zip_codes_file_path).to_crs(epsg=3035)
+        self._zip_codes: gpd.GeoDataFrame = gpd.read_feather(self.zip_codes_file_path).to_crs(epsg=3035)
         logger.info("Loading zip codes file. Done.")
 
     def _init_altitude_file(self) -> None:
         logger.info("Loading altitude file...")
         crs = rio.CRS.from_epsg(25832)
-        self._altitude: gpd.GeoDataFrame[float] = rio.open(self.altitude_file_path, crs=crs)
+        self._altitude: rio.io.DatasetReader = rio.open(self.altitude_file_path, crs=crs)
         logger.info("Loading altitude file. Done.")
 
     def _init_dwd_try_zones_file(self) -> None:
         logger.info("Loading DWD TRY zones file...")
-        self._dwd_try_zones: gpd.GeoDataFrame[int] = gpd.read_feather(self.dwd_try_zones_file_path).to_crs(epsg=3035)
+        self._dwd_try_zones: gpd.GeoDataFrame = gpd.read_feather(self.dwd_try_zones_file_path).to_crs(epsg=3035)
         logger.info("Loading DWD TRY zones file. Done.")
 
     def _init_dwd_try_files(self) -> None:
@@ -289,7 +287,7 @@ class GeoRef:
     def _init_newa_index_file(self) -> None:
         logger.info("Loading NEWA index file...")
         index_file_path = self.newa_files_path / f"newa_{self.newa_year}_index_epsg3034.feather"
-        self._newa_index: gpd.GeoDataFrame[int] = gpd.read_feather(index_file_path).to_crs(epsg=3035)
+        self._newa_index: gpd.GeoDataFrame = gpd.read_feather(index_file_path).to_crs(epsg=3035)
         logger.info("Loading NEWA index file. Done.")
 
     def _init_newa_files(self) -> None:
@@ -306,19 +304,19 @@ class GeoRef:
 
     def _init_clc_file_path(self) -> None:
         logger.info("Loading CLC file...")
-        self._clc: gpd.GeoDataFrame[ValidCLCs] = gpd.read_feather(self.clc_file_path).to_crs(epsg=3035)
+        self._clc: gpd.GeoDataFrame = gpd.read_feather(self.clc_file_path).to_crs(epsg=3035)
         logger.info("Loading CLC file. Done.")
 
     def _init_time_zones_file(self) -> None:
         logger.info("Loading time zones file...")
-        self._time_zones: gpd.GeoDataFrame[str] = gpd.read_feather(self.time_zones_file_path).to_crs(epsg=3035)
+        self._time_zones: gpd.GeoDataFrame = gpd.read_feather(self.time_zones_file_path).to_crs(epsg=3035)
         logger.info("Loading time zones file. Done.")
 
     def _init_voronoi_file(self) -> None:
         match self.voronoi_file_path:
             case Some(voronoi_file_path):
                 logger.info("Loading voronoi file...")
-                self._voronoi: gpd.GeoDataFrame[str] = gpd.read_feather(voronoi_file_path).to_crs(epsg=3035)
+                self._voronoi: gpd.GeoDataFrame = gpd.read_feather(voronoi_file_path).to_crs(epsg=3035)
                 logger.info("Loading voronoi file. Done.")
             case Null():
                 logger.info("Skipping voronoi file...")

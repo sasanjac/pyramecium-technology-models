@@ -88,7 +88,7 @@ class Ground:
     @staticmethod
     def _day_of_year(index: pd.DatetimeIndex) -> npt.NDArray[np.float64]:
         hours = index.hour.to_numpy() + index.minute.to_numpy() / 60 + index.second.to_numpy() / 3600
-        return t.cast("npt.NDArray[np.float64]", (index.dayofyear.to_numpy() - 1) + hours / 24)
+        return (index.dayofyear.to_numpy() - 1) + hours / 24
 
     @staticmethod
     def fit_surface_harmonic(

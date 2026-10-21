@@ -40,12 +40,5 @@ jobs:
       - name: Dependency check using deptry
         run: uv run deptry .
 
-      - name: Type check using mypy
-        # mypy needs minutes on the pyochain stubs for most hash seeds and seconds for this one
-        env:
-          PYTHONHASHSEED: "5"
-        run: uv run mypy .
-
       - name: Type check using pyrefly
-        run: uv run pyrefly check
-        continue-on-error: true
+        run: uv run pyrefly check --output-format full-text-with-github

@@ -182,7 +182,7 @@ class TestEVSystemRun:
 
     def test_ev_system_run(self, ev_system_full: EVSystem) -> None:
         """Test EVSystem run method populates acp."""
-        ev_system_full.run()
+        ev_system_full.run().unwrap()
         acp_high = ev_system_full.acp["high"]["L1"]
         # acp should have values
         assert not acp_high.isna().all()

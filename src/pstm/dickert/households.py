@@ -29,6 +29,7 @@ if t.TYPE_CHECKING:
     import pathlib
 
     import numpy.typing as npt
+    from pandas.tseries.offsets import BaseOffset
     from pyochain import Result
 
     from pstm.dickert.appliances import DistributionType
@@ -300,7 +301,7 @@ class Households:
             .map(lambda freq: self._pop(index_target, freq))
         )
 
-    def _pop(self, index_target: pd.DatetimeIndex, freq: pd.DateOffset) -> Tech:
+    def _pop(self, index_target: pd.DatetimeIndex, freq: BaseOffset) -> Tech:
         p, self.p = (self.p[:, 0, :], self.p[:, 1:, :])
         q, self.q = (self.q[:, 0, :], self.q[:, 1:, :])
         step_length = Constants.MINUTES_PER_YEAR / self.n_steps

@@ -583,7 +583,7 @@ class NEWA:
         index_utc = pd.DatetimeIndex([pd.Timestamp(str(s)) for s in stamps.ravel()]).tz_localize("UTC")
         stop = pd.Timestamp(data.temporalExtentMaximum).tz_localize("UTC")
         keep = np.asarray(index_utc < stop)
-        index = t.cast("pd.DatetimeIndex", index_utc[keep].tz_convert(tz))
+        index = index_utc[keep].tz_convert(tz)
 
         def var(name: str, level: Option[int] = NONE) -> Array1DF:
             match level:

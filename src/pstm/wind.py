@@ -27,8 +27,9 @@ loguru.logger.disable("windpowerlib")
 
 SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 DEFAULT_TURBINE = wpl.WindTurbine(turbine_type="E-126/4200", hub_height=135)
-DEFAULT_POWER_CURVE_WIND = DEFAULT_TURBINE.power_curve["wind_speed"]
-DEFAULT_POWER_CURVE_POWER = DEFAULT_TURBINE.power_curve["value"] / DEFAULT_TURBINE.power_curve["value"].max()
+DEFAULT_POWER_CURVE = t.cast("pd.DataFrame", DEFAULT_TURBINE.power_curve)
+DEFAULT_POWER_CURVE_WIND = DEFAULT_POWER_CURVE["wind_speed"]
+DEFAULT_POWER_CURVE_POWER = DEFAULT_POWER_CURVE["value"] / DEFAULT_POWER_CURVE["value"].max()
 
 FULL_LOAD_HOURS_MAX = 4_500
 FULL_LOAD_HOURS_MIN = 1_500
@@ -89,7 +90,7 @@ class Wind(Tech):
         """
         self.mc.run_model(weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
-        return self._resample_as_array(target=-self.mc.power_output, index=index).map(self._set_power)
+        return self._resample_as_array(target=-self.ac, index=index).map(self._set_power)
 
     def _set_power(self, acp: npt.NDArray[np.float64]) -> None:
         power_inst = self.power_inst.unwrap_or(self.turbine.nominal_power)
@@ -139,7 +140,7 @@ class WindFarm(Tech):
         """
         self.mc.run_model(weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
-        return self._resample_as_array(target=-self.mc.power_output, index=index).map(self._set_power)
+        return self._resample_as_array(target=-self.ac, index=index).map(self._set_power)
 
     def _set_power(self, acp: npt.NDArray[np.float64]) -> None:
         full_load_hours: float = -acp.sum() / sum(self.powers_inst) * 8760 / acp.size  # acp is negative (generation)

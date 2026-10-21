@@ -10,6 +10,7 @@ import typing as t
 import attrs
 import numpy as np
 import pandas as pd
+from pyochain import option
 
 from pstm.base import Tech
 from pstm.utils.dates import Dates
@@ -27,6 +28,8 @@ class DrivingCategory(enum.StrEnum):
 
 
 if t.TYPE_CHECKING:
+    from pyochain import Result
+
     Profile = t.Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     NTrips = t.Literal[0, 1, 2, 3]
 
@@ -127,7 +130,7 @@ class Driver:
 
     @classmethod
     def from_random(cls) -> Driver:
-        profile: Profile = GEN.integers(low=1, high=13)  # type: ignore[assignment]  # high is exclusive; profiles are 1..12
+        profile = t.cast("Profile", int(GEN.integers(low=1, high=13)))  # high is exclusive; profiles are 1..12
         return cls.from_profile(profile=profile)
 
     @classmethod
@@ -201,13 +204,25 @@ class EVSystem(Tech):
 
         return rv
 
-    def run(self) -> None:
+    def run(self) -> Result[None, ValueError]:
+        """Charging profile of one year on :attr:`dates`.
+
+        Returns:
+            ``Err`` if :attr:`dates` has no frequency.
+        """
         index = Dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
         type_day_start = int(self.dates.weekday[0])
         n_days = len(index) // (24 * 4)  # 365 or 366 (leap year); avoid index-length mismatch
         tds = [TypeDay.WD if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else TypeDay.WE for i in range(n_days)]
         acp = pd.Series(np.concatenate([self.power(td) for td in tds]), index=index, name="p_el")
-        self.acp.loc[:, "high"] = acp.resample(self.dates.freq).mean()
+        return (
+            option(self.dates.freq)
+            .ok_or(ValueError("The frequency of the index is not defined."))
+            .map(lambda freq: self._set_power(acp.resample(freq).mean()))
+        )
+
+    def _set_power(self, acp: pd.Series) -> None:
+        self.acp.loc[:, "high"] = acp
 
 
 CARS = {  # G. Preßmair, “Modellierung und Simulation von Lastprofilen batterieelektrischer Fahrzeuge zur Auslegung von Ladestationen in Wohnhausanlagen,” Mar. 2020.

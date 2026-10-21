@@ -33,22 +33,26 @@ CONVERTER.register_unstructure_hook_factory(
     ),
 )
 
+MIDNIGHT: t.Any = dt.time(0)
+"""Fill value of the empty time cells; pandas-stubs list no time among the fill values of fillna."""
+
 JSONPrimitive = bool | float | int | str | None
 JSONType = JSONPrimitive | list[JSONPrimitive] | dict[str, JSONPrimitive]
 
 
 class NpEncoder(json.JSONEncoder):
-    def default(self, obj: JSONType | np.integer | np.floating | np.ndarray) -> JSONType:
-        if isinstance(obj, np.integer):
-            return int(obj)
+    @t.override
+    def default(self, o: JSONType | np.integer | np.floating | np.ndarray) -> JSONType:
+        if isinstance(o, np.integer):
+            return int(o)
 
-        if isinstance(obj, np.floating):
-            return float(obj)
+        if isinstance(o, np.floating):
+            return float(o)
 
-        if isinstance(obj, np.ndarray):
-            return t.cast("JSONType", obj.tolist())
+        if isinstance(o, np.ndarray):
+            return t.cast("JSONType", o.tolist())
 
-        return t.cast("JSONType", super().default(obj))
+        return t.cast("JSONType", super().default(o))
 
 
 class DickertHouseholds:
@@ -162,20 +166,20 @@ class DickertHouseholds:
                     "probability_3": on_off_profiles.iloc[i * 4 + 1, [9]].fillna(0).to_numpy()[0],
                     "probability_4": on_off_profiles.iloc[i * 4 + 1, [10]].fillna(0).to_numpy()[0],
                     "time_on_parameters_1": (
-                        on_off_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 1, [25]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 1, [26]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 1, [27]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 1, [28]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 1, [29]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 1, [30]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_on_parameters_2": (
-                        on_off_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],
-                        on_off_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 2, [25]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 2, [26]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 2, [27]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 2, [28]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 2, [29]].fillna(MIDNIGHT).to_numpy()[0],
+                        on_off_profiles.iloc[i * 4 + 2, [30]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_on_parameters_3": (
                         on_off_profiles.iloc[i * 4 + 3, [25]].fillna(0).to_numpy()[0],
@@ -233,20 +237,20 @@ class DickertHouseholds:
                     "probability_3": process_profiles.iloc[i * 4 + 1, [9]].fillna(0).to_numpy()[0],
                     "probability_4": process_profiles.iloc[i * 4 + 1, [10]].fillna(0).to_numpy()[0],
                     "time_on_parameters_1": (
-                        process_profiles.iloc[i * 4 + 1, [25]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 1, [26]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 1, [27]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 1, [28]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 1, [29]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 1, [30]].fillna(dt.time(0)).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 1, [25]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 1, [26]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 1, [27]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 1, [28]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 1, [29]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 1, [30]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_on_parameters_2": (
-                        process_profiles.iloc[i * 4 + 2, [25]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 2, [26]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 2, [27]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 2, [28]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 2, [29]].fillna(dt.time(0)).to_numpy()[0],
-                        process_profiles.iloc[i * 4 + 2, [30]].fillna(dt.time(0)).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 2, [25]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 2, [26]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 2, [27]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 2, [28]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 2, [29]].fillna(MIDNIGHT).to_numpy()[0],
+                        process_profiles.iloc[i * 4 + 2, [30]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_on_parameters_3": (
                         process_profiles.iloc[i * 4 + 3, [25]].fillna(0).to_numpy()[0],
@@ -303,12 +307,12 @@ class DickertHouseholds:
                         lighting_profiles.iloc[i * 9 + 1, [12]].fillna(0).to_numpy()[0],
                     ),
                     "lighting_parameters_1": (
-                        lighting_profiles.iloc[i * 9, [13]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 1, [13]].fillna(dt.time(0)).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9, [13]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 1, [13]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "lighting_parameters_2": (
-                        lighting_profiles.iloc[i * 9, [14]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 1, [14]].fillna(dt.time(0)).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9, [14]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 1, [14]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_on_distribution_types": (
                         lighting_profiles.iloc[i * 9, [17]].fillna("normal").to_numpy()[0],
@@ -317,16 +321,16 @@ class DickertHouseholds:
                         lighting_profiles.iloc[i * 9, [20]].fillna("normal").to_numpy()[0],
                     ),
                     "time_on_parameters_1": (
-                        lighting_profiles.iloc[i * 9 + 1, [17]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 1, [18]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 1, [19]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 1, [20]].fillna(dt.time(0)).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 1, [17]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 1, [18]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 1, [19]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 1, [20]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_on_parameters_2": (
-                        lighting_profiles.iloc[i * 9 + 2, [17]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 2, [18]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 2, [19]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 2, [20]].fillna(dt.time(0)).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 2, [17]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 2, [18]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 2, [19]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 2, [20]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_off_distribution_types": (
                         lighting_profiles.iloc[i * 9 + 4, [17]].fillna("normal").to_numpy()[0],
@@ -335,16 +339,16 @@ class DickertHouseholds:
                         lighting_profiles.iloc[i * 9 + 4, [20]].fillna("normal").to_numpy()[0],
                     ),
                     "time_off_parameters_1": (
-                        lighting_profiles.iloc[i * 9 + 5, [17]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 5, [18]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 5, [19]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 5, [20]].fillna(dt.time(0)).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 5, [17]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 5, [18]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 5, [19]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 5, [20]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_off_parameters_2": (
-                        lighting_profiles.iloc[i * 9 + 6, [17]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 6, [18]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 6, [19]].fillna(dt.time(0)).to_numpy()[0],
-                        lighting_profiles.iloc[i * 9 + 6, [20]].fillna(dt.time(0)).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 6, [17]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 6, [18]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 6, [19]].fillna(MIDNIGHT).to_numpy()[0],
+                        lighting_profiles.iloc[i * 9 + 6, [20]].fillna(MIDNIGHT).to_numpy()[0],
                     ),
                     "time_on_variations": (
                         lighting_profiles.iloc[i * 9 + 7, [17]].fillna(0).to_numpy()[0],

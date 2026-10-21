@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import typing as t
 import zoneinfo as zi
 
 import numpy as np
@@ -38,10 +39,10 @@ class HeatPumpCase:
         return pd.Series(5 + 10 * np.sin((hours - 6) * np.pi / 12), index=dates)
 
     @staticmethod
-    def air(dates: pd.DatetimeIndex, **kwargs: object) -> AirHeatPump:
-        params: dict[str, object] = {"power_inst": 5000, "heating_system": "floor", "efficiency": "normal"}
+    def air(dates: pd.DatetimeIndex, **kwargs: t.Any) -> AirHeatPump:
+        params: dict[str, t.Any] = {"power_inst": 5000, "heating_system": "floor", "efficiency": "normal"}
         params.update(kwargs)
-        return AirHeatPump(dates=dates, tz=TZ, **params)  # type: ignore[arg-type]
+        return AirHeatPump(dates=dates, tz=TZ, **params)
 
 
 class TestSinkTemperature(HeatPumpCase):
@@ -273,4 +274,4 @@ class TestKusuda(HeatPumpCase):
         temp = pd.Series(9.5 - 9.0 * np.cos(2 * np.pi / 365 * (day - 20.0)), index=dates)
         ground = Ground.kusuda_ground_temperature(temp).unwrap()
         assert ground.max() - ground.min() == pytest.approx(2 * 9.0 * 0.465665, abs=0.05)
-        assert ground.idxmin().dayofyear - 1 == pytest.approx(20 + 44.4, abs=1.5)
+        assert pd.Timestamp(ground.idxmin()).dayofyear - 1 == pytest.approx(20 + 44.4, abs=1.5)

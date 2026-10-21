@@ -76,7 +76,8 @@ class PV(Tech):
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
-        return self._resample_as_array(target=-self.mc.results.ac, index=index).map(self._set_power)
+        ac = t.cast("pd.Series", self.mc.results.ac)
+        return self._resample_as_array(target=-ac, index=index).map(self._set_power)
 
     def _set_power(self, acp: npt.NDArray[np.float64]) -> None:
         self.acp.loc[:, ("low", "L1")] = acp

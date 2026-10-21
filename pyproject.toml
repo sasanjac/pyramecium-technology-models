@@ -59,7 +59,6 @@
     "deptry>=0.23.0",
     "ipykernel>=6.29.5",
     "matplotlib>=3.9.1.post1",
-    "mypy>=2.3.0",
     "poethepoet>=0.48.0",
     "pyrefly>=1.0.0",
     "pytest-cov>=5.0.0",
@@ -162,24 +161,16 @@
   version       = "1.1.0"
   version_files = ["pyproject.toml:version", "src/pstm/__version__.py:VERSION"]
 
-[tool.mypy]
-  check_untyped_defs     = true
-  disallow_untyped_defs  = true
-  exclude                = '(^\.venv/|^\.claude/)'
-  follow_imports         = "normal"
-  ignore_missing_imports = true
-  mypy_path              = "src/pstm"
-  namespace_packages     = true
-  no_implicit_optional   = true
-  show_error_codes       = true
-  strict_optional        = true
-  warn_no_return         = true
-  warn_redundant_casts   = true
-  warn_return_any        = true
-  warn_unused_ignores    = true
+[tool.pyrefly]
+  preset           = "default"
+  project-includes = ["src", "tests"]
+  search-path      = ["src"]
 
-[tool.pyrefly.errors]
-  redundant-cast = "warn"
+  [tool.pyrefly.errors]
+    implicit-any-parameter = "error"
+    no-any-return          = "error"
+    redundant-cast         = "warn"
+    unannotated-return     = "error"
 
 [tool.deptry]
   known_first_party = ["pstm"]
@@ -220,12 +211,11 @@
   typeCheckingMode = "off"
 
 [tool.poe.tasks]
-  # mypy needs minutes on the pyochain stubs for most hash seeds and seconds for this one
   check = [
     { cmd = "ruff check ." },
     { cmd = "ruff format --check ." },
     { cmd = "deptry ." },
-    { cmd = "mypy .", env = { PYTHONHASHSEED = "5" } },
+    { cmd = "pyrefly check" },
   ]
   format = [{ cmd = "ruff check . --fix" }, { cmd = "ruff format ." }]
   lint = { cmd = "ruff check . --fix" }

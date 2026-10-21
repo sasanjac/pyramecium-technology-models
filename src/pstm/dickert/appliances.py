@@ -167,7 +167,7 @@ class Appliances(Constructible):
         time_on: npt.NDArray[np.int64],
         time_off: npt.NDArray[np.int64],
     ) -> npt.NDArray[np.float64]:
-        n_rows = np.max([np.max([time_on, time_off]) + 1, n_steps])
+        n_rows = max(int(np.max([time_on, time_off])) + 1, n_steps)
         p = np.zeros((n_rows, n_units))
         for i in range(n_units):
             p[time_off[time_off[:, i] > 0, i], i] = -1
