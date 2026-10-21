@@ -1,6 +1,9 @@
 ---
 name: Test code
 
+# Both jobs run on pull_request for every author, dependabot included: they
+# need no secret, so the read-only token of dependabot runs suffices.
+
 on:
   push:
     branches:
@@ -10,16 +13,10 @@ on:
     branches:
       - main
 
-  pull_request_target:
-    branches:
-      - main
-
   workflow_call:
 
 concurrency:
-  # A new push cancels the runs of the superseded commit. The event name keeps
-  # pull_request and pull_request_target apart, since both fire for every pull
-  # request and only one of them runs the jobs.
+  # A new push cancels the runs of the superseded commit.
   group: test-code-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
@@ -27,31 +24,15 @@ jobs:
   check-code:
     name: Check code
     uses: ./.github/workflows/check-code.yml
-    if: |
-      (github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]') ||
-      (github.event_name != 'pull_request_target' && github.event.pull_request.user.login != 'dependabot[bot]')
-    with:
-      ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || '' }}
 
   test-code:
     name: Test code
     runs-on: ubuntu-24.04
     # No needs on check-code: a skipped job reports no failure, so the required
     # check "Test code" would pass whenever check-code fails.
-    if: |
-      (github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]') ||
-      (github.event_name != 'pull_request_target' && github.event.pull_request.user.login != 'dependabot[bot]')
-
     steps:
       - name: Check out repository
-        if: ${{ github.event_name != 'pull_request_target' }}
         uses: actions/checkout@v7.0.1
-
-      - name: Check out repository
-        if: ${{ github.event_name == 'pull_request_target' }}
-        uses: actions/checkout@v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1

@@ -3,15 +3,6 @@ name: Check code
 
 on:
   workflow_call:
-    inputs:
-      ref:
-        description: >-
-          Commit to check out. Empty means the default ref of the triggering event,
-          which for pull_request_target is the base branch, so callers on that
-          event pass the head SHA of the pull request.
-        type: string
-        required: false
-        default: ""
 
 jobs:
   check-code:
@@ -20,8 +11,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
