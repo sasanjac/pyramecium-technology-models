@@ -25,7 +25,8 @@ class Power2Heat(Tech):
         elif self.heating_type == "process_high":
             self.thh.low = -self.power_inst * self.efficiency
         else:
-            raise ValueError
+            msg = f"Unknown heating type {self.heating_type!r}."
+            raise ValueError(msg)
 
         self.acp.high = self.power_inst
         self.acq.high = self.power_inst * np.tan(np.arccos(self.cosphi))

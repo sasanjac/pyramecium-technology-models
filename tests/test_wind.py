@@ -9,9 +9,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pstm.utils.dates import date_range
+from pstm.wind import MODELCHAIN_DATA
 from pstm.wind import MissingArgumentsError
 from pstm.wind import Wind
-from pstm.utils.dates import date_range
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
@@ -80,30 +81,33 @@ class TestWindRun:
     @pytest.fixture
     def weather(self, dates: pd.DatetimeIndex) -> pd.DataFrame:
         """Generate synthetic weather data.
-        
+
         windpowerlib requires Multi-level column index with (variable, height).
         """
         n = len(dates)
+        rng = np.random.default_rng(0)
         # Simulate varying wind speeds
         wind_speed = 8 + 4 * np.sin(np.linspace(0, 4 * np.pi, n))
         # Create multi-level columns as required by windpowerlib
-        columns = pd.MultiIndex.from_tuples([
-            ("wind_speed", 10),
-            ("temperature", 2),
-            ("pressure", 0),
-            ("roughness_length", 0),
-        ])
-        data = np.column_stack([
-            wind_speed,  # wind_speed m/s
-            15 + 5 * np.random.rand(n) + 273.15,  # temperature K
-            101300 + 1000 * np.random.rand(n),  # pressure Pa
-            np.full(n, 0.1),  # roughness_length m
-        ])
+        columns = pd.MultiIndex.from_tuples(
+            [
+                ("wind_speed", 10),
+                ("temperature", 2),
+                ("pressure", 0),
+                ("roughness_length", 0),
+            ]
+        )
+        data = np.column_stack(
+            [
+                wind_speed,  # wind_speed m/s
+                15 + 5 * rng.random(n) + 273.15,  # temperature K
+                101300 + 1000 * rng.random(n),  # pressure Pa
+                np.full(n, 0.1),  # roughness_length m
+            ]
+        )
         return pd.DataFrame(data, index=dates, columns=columns)
 
-    def test_wind_run_produces_output(
-        self, dates: pd.DatetimeIndex, weather: pd.DataFrame
-    ) -> None:
+    def test_wind_run_produces_output(self, dates: pd.DatetimeIndex, weather: pd.DataFrame) -> None:
         """Test that Wind run produces output."""
         wind = Wind(
             dates=dates,
@@ -113,13 +117,11 @@ class TestWindRun:
             lon=9.5,
         )
         wind.run(weather)
-        
-        # Wind output should be non-zero (negative for generation)
-        assert np.any(wind.acp["low"]["L1"].values != 0)
 
-    def test_wind_output_within_rated_power(
-        self, dates: pd.DatetimeIndex, weather: pd.DataFrame
-    ) -> None:
+        # Wind output should be non-zero (negative for generation)
+        assert np.any(wind.acp["low"]["L1"].to_numpy() != 0)
+
+    def test_wind_output_within_rated_power(self, dates: pd.DatetimeIndex, weather: pd.DataFrame) -> None:
         """Test Wind output is within rated power limits."""
         power_inst = 2000000
         wind = Wind(
@@ -130,13 +132,11 @@ class TestWindRun:
             lon=9.5,
         )
         wind.run(weather)
-        
-        # Output (negative) should not exceed rated power
-        assert np.all(wind.acp["low"]["L1"].values >= -power_inst * 1.1)  # 10% margin
 
-    def test_wind_reactive_power(
-        self, dates: pd.DatetimeIndex, weather: pd.DataFrame
-    ) -> None:
+        # Output (negative) should not exceed rated power
+        assert np.all(wind.acp["low"]["L1"].to_numpy() >= -power_inst * 1.1)  # 10% margin
+
+    def test_wind_reactive_power(self, dates: pd.DatetimeIndex, weather: pd.DataFrame) -> None:
         """Test Wind reactive power is calculated."""
         wind = Wind(
             dates=dates,
@@ -147,9 +147,9 @@ class TestWindRun:
             cosphi=0.9,
         )
         wind.run(weather)
-        
+
         # Reactive power should be calculated
-        assert np.any(wind.acq["low"]["L1"].values != 0)
+        assert np.any(wind.acq["low"]["L1"].to_numpy() != 0)
 
 
 class TestWindSiteIndependence:
@@ -171,27 +171,29 @@ class TestWindSiteIndependence:
     @pytest.fixture
     def weather(self, dates: pd.DatetimeIndex) -> pd.DataFrame:
         """Generate synthetic weather data.
-        
+
         windpowerlib requires Multi-level column index with (variable, height).
         """
         n = len(dates)
-        columns = pd.MultiIndex.from_tuples([
-            ("wind_speed", 10),
-            ("temperature", 2),
-            ("pressure", 0),
-            ("roughness_length", 0),
-        ])
-        data = np.column_stack([
-            np.full(n, 10.0),  # Constant wind m/s
-            np.full(n, 15.0 + 273.15),  # temperature K
-            np.full(n, 101300.0),  # pressure Pa
-            np.full(n, 0.1),  # roughness_length m
-        ])
+        columns = pd.MultiIndex.from_tuples(
+            [
+                ("wind_speed", 10),
+                ("temperature", 2),
+                ("pressure", 0),
+                ("roughness_length", 0),
+            ]
+        )
+        data = np.column_stack(
+            [
+                np.full(n, 10.0),  # Constant wind m/s
+                np.full(n, 15.0 + 273.15),  # temperature K
+                np.full(n, 101300.0),  # pressure Pa
+                np.full(n, 0.1),  # roughness_length m
+            ]
+        )
         return pd.DataFrame(data, index=dates, columns=columns)
 
-    def test_identical_weather_gives_identical_output(
-        self, dates: pd.DatetimeIndex, weather: pd.DataFrame
-    ) -> None:
+    def test_identical_weather_gives_identical_output(self, dates: pd.DatetimeIndex, weather: pd.DataFrame) -> None:
         """Two sites under the same weather generate the same energy."""
         # Coastal location (near Elbe mouth)
         wind_coastal = Wind(
@@ -201,7 +203,7 @@ class TestWindSiteIndependence:
             lat=53.86,
             lon=9.5,
         )
-        
+
         # Inland location (southern Germany)
         wind_inland = Wind(
             dates=dates,
@@ -210,7 +212,7 @@ class TestWindSiteIndependence:
             lat=48.0,
             lon=11.5,
         )
-        
+
         # Both should produce output without errors
         wind_coastal.run(weather)
         wind_inland.run(weather)
@@ -229,8 +231,6 @@ class TestWindModelChainData:
         assert wind.mc.wind_speed_model == "hellman"
 
     def test_a_multi_height_chain_interpolates_between_levels(self) -> None:
-        from pstm.wind import MODELCHAIN_DATA
-
         dates = date_range(tz=TZ, year=2023)[:4]
         data = {**MODELCHAIN_DATA, "wind_speed_model": "log_interpolation_extrapolation"}
         wind = Wind(dates=dates, hub_height=100, power_inst=2e6, lat=54.8, lon=13.8, modelchain_data=data)

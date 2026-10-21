@@ -61,7 +61,7 @@ class TestSeriesDemandCreation:
             factor_thl=1.0,
             factor_thh=1.0,
         )
-        assert np.all(demand.acp["high"].values == 2000)
+        assert np.all(demand.acp["high"].to_numpy() == 2000)
 
 
 class TestSeriesDemandFactors:
@@ -92,7 +92,7 @@ class TestSeriesDemandFactors:
             factor_thh=1.0,
         )
         # acp should be scaled by factor
-        assert np.all(demand.acp["high"].values == 1000 * factor)
+        assert np.all(demand.acp["high"].to_numpy() == 1000 * factor)
 
     def test_thr_factor_scaling(self, dates, sample_series) -> None:
         """Test thr factor scales output correctly."""
@@ -109,7 +109,7 @@ class TestSeriesDemandFactors:
             factor_thh=1.0,
         )
         # thr should be scaled by factor
-        assert np.all(demand.thr["high"].values == 1000 * factor)
+        assert np.all(demand.thr["high"].to_numpy() == 1000 * factor)
 
     def test_thl_factor_scaling(self, dates, sample_series) -> None:
         """Test thl factor scales output correctly."""
@@ -126,7 +126,7 @@ class TestSeriesDemandFactors:
             factor_thh=1.0,
         )
         # thl should be scaled by factor
-        assert np.all(demand.thl["high"].values == 1000 * factor)
+        assert np.all(demand.thl["high"].to_numpy() == 1000 * factor)
 
     def test_thh_factor_scaling(self, dates, sample_series) -> None:
         """Test thh factor scales output correctly."""
@@ -143,7 +143,7 @@ class TestSeriesDemandFactors:
             factor_thh=factor,
         )
         # thh should be scaled by factor
-        assert np.all(demand.thh["high"].values == 1000 * factor)
+        assert np.all(demand.thh["high"].to_numpy() == 1000 * factor)
 
 
 class TestSeriesDemandReactivePower:
@@ -189,7 +189,7 @@ class TestSeriesDemandReactivePower:
             factor_thh=1.0,
             cosphi=cosphi,
         )
-        # Q = P * tan(arccos(cosphi))
+        # Q follows from P as P tan(arccos(cosphi))
         expected_q = 1000 * np.tan(np.arccos(cosphi))
         assert np.allclose(demand.acq["high"].values, expected_q)
 

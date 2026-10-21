@@ -135,23 +135,22 @@ class TestGasBoilerInvalidInputs:
 
     def test_invalid_heating_type(self, dates) -> None:
         """Test invalid heating type raises error."""
-        with pytest.raises(ValueError):
-            # Need to bypass attrs validation by using object.__setattr__
-            boiler = GasBoiler(
+        with pytest.raises(ValueError, match="heating type 'invalid'"):
+            GasBoiler(
                 dates=dates,
                 power_inst=20000,
                 efficiency=0.92,
-                heating_type="invalid",  # type: ignore
+                heating_type="invalid",  # type: ignore[arg-type]
                 gas_type="CH4",
             )
 
     def test_invalid_gas_type(self, dates) -> None:
         """Test invalid gas type raises error."""
-        with pytest.raises(ValueError):
-            boiler = GasBoiler(
+        with pytest.raises(ValueError, match="gas type 'invalid'"):
+            GasBoiler(
                 dates=dates,
                 power_inst=20000,
                 efficiency=0.92,
                 heating_type="room",
-                gas_type="invalid",  # type: ignore
+                gas_type="invalid",  # type: ignore[arg-type]
             )

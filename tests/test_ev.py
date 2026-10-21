@@ -8,7 +8,11 @@ import zoneinfo as zi
 import numpy as np
 import pytest
 
-from pstm.ev import Car, ChargePoint, Driver, EVSystem
+from pstm.ev import CARS
+from pstm.ev import Car
+from pstm.ev import ChargePoint
+from pstm.ev import Driver
+from pstm.ev import EVSystem
 from pstm.utils.dates import date_range
 
 TZ = zi.ZoneInfo("Europe/Berlin")
@@ -187,16 +191,13 @@ class TestCarPresets:
 
     def test_bmw_i3_exists(self) -> None:
         """Test BMW i3 preset exists."""
-        from pstm.ev import CARS
         assert "BMW i3" in CARS
         assert CARS["BMW i3"].capacity == 27.2
 
     def test_vw_egolf_exists(self) -> None:
         """Test VW e-Golf preset exists."""
-        from pstm.ev import CARS
         assert "VW e-Golf" in CARS
 
     def test_renault_zoe_exists(self) -> None:
         """Test Renault Zoe preset exists."""
-        from pstm.ev import CARS
         assert "Renault Zoe" in CARS

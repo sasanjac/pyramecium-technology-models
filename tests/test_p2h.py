@@ -137,7 +137,7 @@ class TestPower2HeatElectricalConsumption:
             heating_type="room",
             cosphi=cosphi,
         )
-        # Q = P * tan(arccos(cosphi))
+        # Q follows from P as P tan(arccos(cosphi))
         expected_q = power_inst * np.tan(np.arccos(cosphi))
         assert np.allclose(p2h.acq["high"].values, expected_q)
 
@@ -162,10 +162,10 @@ class TestPower2HeatInvalidInputs:
 
     def test_invalid_heating_type(self, dates) -> None:
         """Test invalid heating type raises error."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="heating type 'invalid'"):
             Power2Heat(
                 dates=dates,
                 power_inst=10000,
                 efficiency=0.95,
-                heating_type="invalid",  # type: ignore
+                heating_type="invalid",  # type: ignore[arg-type]
             )

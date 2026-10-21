@@ -192,9 +192,7 @@ class EVSystem(Tech):
         index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
         type_day_start = int(self.dates.weekday[0])
         n_days = len(index) // (24 * 4)  # 365 or 366 (leap year); avoid index-length mismatch
-        tds: list[TypeDay] = [
-            "WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(n_days)
-        ]
+        tds: list[TypeDay] = ["WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(n_days)]
         acp = pd.Series(np.concatenate([self.power(td) for td in tds]), index=index, name="p_el")
         self.acp.loc[:, "high"] = acp.resample(self.dates.freq).mean()
 

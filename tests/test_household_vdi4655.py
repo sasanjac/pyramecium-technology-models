@@ -3,19 +3,13 @@
 
 from __future__ import annotations
 
-import pathlib
-
-import pytest
-
-from pstm.household_vdi4655 import (
-    ELECTRICITY_DEMAND,
-    ELECTRICITY_DEMAND_MFH,
-    ELECTRICITY_DEMAND_OFH,
-    INSULATION_STANDARDS,
-    POWER_CONVERSION_FACTORS,
-    POWER_FACTORS,
-    WATER_DEMAND,
-)
+from pstm.household_vdi4655 import ELECTRICITY_DEMAND
+from pstm.household_vdi4655 import ELECTRICITY_DEMAND_MFH
+from pstm.household_vdi4655 import ELECTRICITY_DEMAND_OFH
+from pstm.household_vdi4655 import INSULATION_STANDARDS
+from pstm.household_vdi4655 import POWER_CONVERSION_FACTORS
+from pstm.household_vdi4655 import POWER_FACTORS
+from pstm.household_vdi4655 import WATER_DEMAND
 
 
 class TestElectricityDemandConstants:

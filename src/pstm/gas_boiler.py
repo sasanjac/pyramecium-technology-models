@@ -24,11 +24,13 @@ class GasBoiler(Tech):
         elif self.heating_type == "process_high":
             self.thh.low = -self.power_inst
         else:
-            raise ValueError
+            msg = f"Unknown heating type {self.heating_type!r}."
+            raise ValueError(msg)
 
         if self.gas_type == "CH4":
             self.ch4.high = self.power_inst / self.efficiency
         elif self.gas_type == "H2":
             self.h2.high = self.power_inst / self.efficiency
         else:
-            raise ValueError
+            msg = f"Unknown gas type {self.gas_type!r}."
+            raise ValueError(msg)

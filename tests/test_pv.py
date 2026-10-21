@@ -110,6 +110,7 @@ class TestPVRun:
     def weather(self, dates: pd.DatetimeIndex) -> pd.DataFrame:
         """Generate synthetic weather data for one day."""
         n = len(dates)
+        rng = np.random.default_rng(0)
         # Simulate daily solar pattern
         hours = np.array([d.hour + d.minute / 60 for d in dates])
         solar_factor = np.maximum(0, np.sin((hours - 6) * np.pi / 12))
@@ -119,7 +120,7 @@ class TestPVRun:
                 "dni": 600 * solar_factor,
                 "dhi": 200 * solar_factor,
                 "temp_air": 15 + 10 * np.sin((hours - 6) * np.pi / 12),
-                "wind_speed": 3 + np.random.rand(n),
+                "wind_speed": 3 + rng.random(n),
             },
             index=dates,
         )
@@ -138,7 +139,7 @@ class TestPVRun:
 
         # PV output should be negative (generation convention)
         # At least some values should be non-zero during sunny hours
-        assert np.any(pv.acp["low"]["L1"].values != 0)
+        assert np.any(pv.acp["low"]["L1"].to_numpy() != 0)
 
     def test_pv_output_within_limits(self, dates: pd.DatetimeIndex, weather: pd.DataFrame) -> None:
         """Test PV output is within rated power limits."""
@@ -154,7 +155,7 @@ class TestPVRun:
         pv.run(weather)
 
         # Output should not exceed rated power (negative values for generation)
-        assert np.all(pv.acp["low"]["L1"].values >= -power_inst)
+        assert np.all(pv.acp["low"]["L1"].to_numpy() >= -power_inst)
 
 
 class TestPVFromEfficiency:
