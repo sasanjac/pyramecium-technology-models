@@ -54,8 +54,8 @@ class TestRun:
     def test_power_on_the_phase_of_the_appliance(self) -> None:
         appliance = ConstantAppliance(**PARAMS)
         appliance.run(**RUN).unwrap()
-        assert np.all(appliance.p[:, :, 0] == 1.0)
-        assert np.all(appliance.p[:, :, 1:] == 0.0)
+        assert np.allclose(appliance.p[:, :, 0], 1.0)
+        assert np.allclose(appliance.p[:, :, 1:], 0.0)
 
     def test_negative_active_power_is_err(self) -> None:
         appliance = ConstantAppliance(**PARAMS, power=-1.0)

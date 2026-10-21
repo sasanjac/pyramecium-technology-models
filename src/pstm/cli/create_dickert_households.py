@@ -7,13 +7,15 @@ import typing as t
 
 import attrs
 import cattrs
+from cattrs.preconf.json import make_converter
 import click
 import numpy as np
 import pandas as pd
-from cattrs.preconf.json import make_converter
 
-from pstm.dickert.households import ConfigDict
 from pstm.dickert.households import Households
+
+if t.TYPE_CHECKING:
+    from pstm.dickert.households import ConfigDict
 
 CONVERTER = make_converter()
 CONVERTER.register_unstructure_hook(dt.time, lambda v: v.isoformat())
@@ -44,9 +46,9 @@ class NpEncoder(json.JSONEncoder):
             return float(obj)
 
         if isinstance(obj, np.ndarray):
-            return obj.tolist()
+            return t.cast("JSONType", obj.tolist())
 
-        return super().default(obj)
+        return t.cast("JSONType", super().default(obj))
 
 
 class DickertHouseholds:
@@ -57,7 +59,7 @@ class DickertHouseholds:
         type=click.Path(exists=True, path_type=pathlib.Path),
         help="Path to the input file.",
     )
-    def create(*, input_file: pathlib.Path) -> None:
+    def create(*, input_file: pathlib.Path) -> None:  # ruff: ignore[too-many-locals] - one block per profile sheet
         for j in range(6):
             dataframe = pd.read_excel(input_file, sheet_name=f"HH-Typ{j + 1}")
             starts = np.argwhere(dataframe.iloc[:, [0]] == 1)[:, 0]
@@ -130,7 +132,8 @@ class DickertHouseholds:
                     "active_power_parameter_3": on_off_profiles.iloc[i * 4, [9]].fillna(0).to_numpy()[0],
                     "active_power_parameter_4": on_off_profiles.iloc[i * 4, [10]].fillna(0).to_numpy()[0],
                     "reactive_power_share": on_off_profiles.iloc[i * 4, [11]].fillna(0).to_numpy()[0],
-                    "reactive_power_distribution_type": on_off_profiles.iloc[i * 4, [12]]
+                    "reactive_power_distribution_type": on_off_profiles
+                    .iloc[i * 4, [12]]
                     .fillna("normal")
                     .to_numpy()[0],
                     "reactive_power_parameter_1": on_off_profiles.iloc[i * 4, [13]].fillna(0).to_numpy()[0],
@@ -200,7 +203,8 @@ class DickertHouseholds:
                     "active_power_parameter_3": process_profiles.iloc[i * 4, [9]].fillna(0).to_numpy()[0],
                     "active_power_parameter_4": process_profiles.iloc[i * 4, [10]].fillna(0).to_numpy()[0],
                     "reactive_power_share": process_profiles.iloc[i * 4, [11]].fillna(0).to_numpy()[0],
-                    "reactive_power_distribution_type": process_profiles.iloc[i * 4, [12]]
+                    "reactive_power_distribution_type": process_profiles
+                    .iloc[i * 4, [12]]
                     .fillna("normal")
                     .to_numpy()[0],
                     "reactive_power_parameter_1": process_profiles.iloc[i * 4, [13]].fillna(0).to_numpy()[0],
@@ -252,17 +256,20 @@ class DickertHouseholds:
                         process_profiles.iloc[i * 4 + 3, [29]].fillna(0).to_numpy()[0],
                         process_profiles.iloc[i * 4 + 3, [30]].fillna(0).to_numpy()[0],
                     ),
-                    "active_power_2_distribution_type": process_profiles.iloc[i * 4 + 2, [6]]
+                    "active_power_2_distribution_type": process_profiles
+                    .iloc[i * 4 + 2, [6]]
                     .fillna("normal")
                     .to_numpy()[0],
                     "active_power_2_parameter_1": process_profiles.iloc[i * 4 + 2, [7]].fillna(0).to_numpy()[0],
                     "active_power_2_parameter_2": process_profiles.iloc[i * 4 + 2, [8]].fillna(0).to_numpy()[0],
-                    "reactive_power_2_distribution_type": process_profiles.iloc[i * 4 + 2, [12]]
+                    "reactive_power_2_distribution_type": process_profiles
+                    .iloc[i * 4 + 2, [12]]
                     .fillna("normal")
                     .to_numpy()[0],
                     "reactive_power_2_parameter_1": process_profiles.iloc[i * 4 + 2, [13]].fillna(0).to_numpy()[0],
                     "reactive_power_2_parameter_2": process_profiles.iloc[i * 4 + 2, [14]].fillna(0).to_numpy()[0],
-                    "operation_2_distribution_type": process_profiles.iloc[i * 4 + 2, [20]]
+                    "operation_2_distribution_type": process_profiles
+                    .iloc[i * 4 + 2, [20]]
                     .fillna("normal")
                     .to_numpy()[0],
                     "operation_2_parameter_1": process_profiles.iloc[i * 4 + 2, [21]].fillna(0).to_numpy()[0],
@@ -284,7 +291,8 @@ class DickertHouseholds:
                     "active_power_parameter_2": lighting_profiles.iloc[i * 9, [8]].fillna(0).to_numpy()[0],
                     "active_power_parameter_3": lighting_profiles.iloc[i * 9, [9]].fillna(0).to_numpy()[0],
                     "reactive_power_share": lighting_profiles.iloc[i * 9 + 1, [5]].fillna(0).to_numpy()[0],
-                    "reactive_power_distribution_type": lighting_profiles.iloc[i * 9 + 1, [6]]
+                    "reactive_power_distribution_type": lighting_profiles
+                    .iloc[i * 9 + 1, [6]]
                     .fillna("normal")
                     .to_numpy()[0],
                     "reactive_power_parameter_1": lighting_profiles.iloc[i * 9 + 1, [7]].fillna(0).to_numpy()[0],

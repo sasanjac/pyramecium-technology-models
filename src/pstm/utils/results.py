@@ -21,7 +21,7 @@ class Constructible:
     """
 
     @classmethod
-    def create(cls, **kwargs: t.Any) -> Result[t.Self, ValueError]:  # noqa: ANN401
+    def create(cls, **kwargs: t.Any) -> Result[t.Self, ValueError]:
         """Instance built from ``kwargs``.
 
         Returns:

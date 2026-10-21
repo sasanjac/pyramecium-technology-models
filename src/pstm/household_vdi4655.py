@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 import datetime as dt
 import enum
 import json
 import pathlib
 import random
 import typing as t
-from collections import defaultdict
 
 import attrs
 import numpy as np
@@ -126,7 +126,7 @@ class Household(Tech):
             case Some(zone), _, _:
                 pass
             case Null(), Some(lat), Some(lon):
-                from pstm.utils.geo import GeoRef  # noqa: PLC0415 - optional extra geo
+                from pstm.utils.geo import GeoRef  # ruff: ignore[import-outside-top-level] - optional extra geo
 
                 with GeoRef(use_clc=False) as georef:
                     zone = georef.get_dwd_try_zone(lat, lon)
@@ -213,11 +213,11 @@ class Household(Tech):
         if random_shift is True:
             water_thermal_demand = np.roll(
                 water_thermal_demand,
-                random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
+                random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # ruff: ignore[suspicious-non-cryptographic-random-usage]
             )
             heating_thermal_demand = np.roll(
                 heating_thermal_demand,
-                random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
+                random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # ruff: ignore[suspicious-non-cryptographic-random-usage]
             )
 
         water = self._resample_as_array(target=pd.Series(data=water_thermal_demand), index=index)
@@ -231,7 +231,7 @@ class Household(Tech):
     def _run_electrical(self, index: pd.DatetimeIndex, *, random_shift: bool) -> Result[None, ValueError]:
         active_electrical_demand = self._calculate_active_electrical_demand()
         if random_shift is True:
-            active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))  # noqa: S311
+            active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))  # ruff: ignore[suspicious-non-cryptographic-random-usage]
 
         return self._resample_as_array(target=pd.Series(data=active_electrical_demand), index=index).map(
             self._set_electrical,
@@ -271,7 +271,7 @@ class Household(Tech):
 
     def _calculate_reactive_electrical_demand(self) -> npt.NDArray[np.float64]:
         acp = t.cast("npt.NDArray[np.float64]", self.acp.high.L1.to_numpy(dtype=np.float64))
-        sign = random.randint(0, 1)  # capacitive or inductive  # noqa: S311
+        sign = random.randint(0, 1)  # capacitive or inductive  # ruff: ignore[suspicious-non-cryptographic-random-usage]
         cosphi = self._cosphi(sign, acp)
         x = np.tan(np.arccos(cosphi)).astype(np.float64)
         return (sign * 2 - 1) * acp * x

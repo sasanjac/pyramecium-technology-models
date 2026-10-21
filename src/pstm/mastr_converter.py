@@ -46,7 +46,11 @@ class MaStRCatalog:
         return int(values[0]) if values.size > 0 else -1
 
     def get_value(self, code: float) -> Option[str]:
-        """Catalog value of ``code``, ``NONE`` for a code that is not finite or not in the catalog."""
+        """Catalog value of ``code``.
+
+        Returns:
+            ``NONE`` for a code that is not finite or not in the catalog.
+        """
         return (
             then_if_true(code, predicate=math.isfinite)
             .map(lambda code_: self._catalog[self._catalog["Id"] == int(code_)]["Wert"].to_numpy())

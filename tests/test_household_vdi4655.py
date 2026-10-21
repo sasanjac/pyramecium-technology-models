@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from pstm.household_vdi4655 import ELECTRICITY_DEMAND
 from pstm.household_vdi4655 import ELECTRICITY_DEMAND_MFH
 from pstm.household_vdi4655 import ELECTRICITY_DEMAND_OFH
@@ -126,13 +128,13 @@ class TestPowerFactors:
 
     def test_capacitive_factors(self) -> None:
         """Test capacitive power factor parameters."""
-        assert POWER_FACTORS[0]["a"] == 0.99
-        assert POWER_FACTORS[0]["b"] == 1.605
+        assert POWER_FACTORS[0]["a"] == pytest.approx(0.99)
+        assert POWER_FACTORS[0]["b"] == pytest.approx(1.605)
 
     def test_inductive_factors(self) -> None:
         """Test inductive power factor parameters."""
-        assert POWER_FACTORS[1]["a"] == 0.99
-        assert POWER_FACTORS[1]["b"] == 4.904
+        assert POWER_FACTORS[1]["a"] == pytest.approx(0.99)
+        assert POWER_FACTORS[1]["b"] == pytest.approx(4.904)
 
     def test_two_factor_types(self) -> None:
         """Test exactly two factor types exist (capacitive and inductive)."""

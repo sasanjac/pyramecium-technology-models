@@ -151,7 +151,11 @@ class Tech(Constructible):
         )
 
     def heat(self, heating_type: HeatingType) -> pd.DataFrame:
-        """Thermal frame of ``heating_type``."""
+        """Thermal frame of ``heating_type``.
+
+        Returns:
+            ``thr`` for room heat, ``thl`` for low and ``thh`` for high temperature process heat.
+        """
         match heating_type:
             case HeatingType.ROOM:
                 return self.thr

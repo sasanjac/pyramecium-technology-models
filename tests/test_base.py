@@ -45,7 +45,7 @@ class TestResample(TechCase):
     def test_downsampling_onto_dates(self, dates: pd.DatetimeIndex) -> None:
         index = pd.date_range(dates[0], periods=4 * len(dates), freq="15min")
         target = pd.Series(np.repeat(np.arange(len(dates), dtype=np.float64), 4), index=index)
-        resampled = Tech(dates=dates)._resample(target, index).unwrap()  # noqa: SLF001
+        resampled = Tech(dates=dates)._resample(target, index).unwrap()
         assert np.allclose(resampled.to_numpy(), np.arange(len(dates)))
 
     def test_downsampling_without_frequency_is_err(self, dates: pd.DatetimeIndex) -> None:
@@ -53,7 +53,7 @@ class TestResample(TechCase):
         assert irregular.freq is None
         index = pd.date_range(dates[0], periods=4 * len(dates), freq="15min")
         target = pd.Series(np.zeros(len(index)), index=index)
-        error = Tech(dates=irregular)._resample(target, index).unwrap_err()  # noqa: SLF001
+        error = Tech(dates=irregular)._resample(target, index).unwrap_err()
         assert "frequency of the index is not defined" in str(error)
 
 

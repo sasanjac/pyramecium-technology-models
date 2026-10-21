@@ -9,8 +9,8 @@ import typing as t
 import zoneinfo as zi
 
 import attrs
-import numpy as np
 from loguru import logger
+import numpy as np
 from pyochain import NONE
 from pyochain import Err
 from pyochain import Null
@@ -21,15 +21,14 @@ from pyochain import then_if_true
 
 from pstm.utils.exceptions import MissingExtraError
 from pstm.utils.roughness_lengths import ROUGHNESS_LENGTHS
-from pstm.utils.roughness_lengths import ValidCLCs
 
-try:
+try:  # ruff: ignore[too-many-statements-in-try-clause] - one import per package of the extra
     import aiohttp
     import geopandas as gpd
     import pyproj
     import rasterio as rio
-    import shapely.geometry as shg
     from scipy.spatial import distance
+    import shapely.geometry as shg
 except ModuleNotFoundError as e:
     extra = "geo"
     raise MissingExtraError(extra) from e
@@ -41,6 +40,8 @@ if t.TYPE_CHECKING:
 
     import numpy.typing as npt
     from pyochain import Result
+
+    from pstm.utils.roughness_lengths import ValidCLCs
 
     T = t.TypeVar("T")
 
@@ -122,7 +123,7 @@ class GeoRef:
     def get_voronois(self, lat: float, lon: float) -> cabc.Sequence[int]:
         lat, lon = self._transformer_3035.transform(xx=lat, yy=lon)
         coord = shg.Point(lon, lat)
-        return self._voronoi.distance(coord).sort_values().index.tolist()
+        return t.cast("cabc.Sequence[int]", self._voronoi.distance(coord).sort_values().index.tolist())
 
     def get_value_for_coord(self, shape: gpd.GeoDataFrame[T], lat: float, lon: float) -> T:  # type: ignore[type-var]
         lat_, lon_ = self._transformer_3035.transform(xx=lat, yy=lon)
@@ -130,7 +131,7 @@ class GeoRef:
         data = shape[shape.geometry.contains(coord)].value
         if len(data) == 0:
             logger.warning("Coordinate {lat}, {lon} not found in shape. Using closest distance.", lat=lat, lon=lon)
-            return shape.iloc[shape.distance(coord).argmin()].value
+            return t.cast("T", shape.iloc[shape.distance(coord).argmin()].value)
 
         if len(data) != 1:
             logger.warning(
@@ -139,7 +140,7 @@ class GeoRef:
                 lon=lon,
             )
 
-        return data.to_numpy()[0]
+        return t.cast("T", data.to_numpy()[0])
 
     def get_weather_gen_file(self, lat: float, lon: float) -> Result[pathlib.Path, RuntimeError | FileNotFoundError]:
         """Weather generator file closest to ``lat``, ``lon``.
@@ -189,17 +190,17 @@ class GeoRef:
             session.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=aiohttp.ClientTimeout(total=5)) as response,
         ):
             json_body = await response.json()
-            return json_body["results"][0]["altitude"]
+            return float(json_body["results"][0]["altitude"])
 
     def get_altitude(self, lat: float, lon: float) -> float:
         lat, lon = self._transformer_25832.transform(xx=lat, yy=lon)
-        return next(iter(self._altitude.sample(((lat, lon),))))[0]
+        return float(next(iter(self._altitude.sample(((lat, lon),))))[0])
 
     def get_roughness_length(self, lat: float, lon: float) -> float:
         clc = self.get_clc(lat=lat, lon=lon)
         min_length = ROUGHNESS_LENGTHS[clc]["rmin"]
         max_length = ROUGHNESS_LENGTHS[clc]["rmax"]
-        return random.uniform(min_length, max_length)  # noqa: S311
+        return random.uniform(min_length, max_length)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
 
     def get_clc(self, lat: float, lon: float) -> ValidCLCs:
         return self.get_value_for_coord(self._clc, lat=lat, lon=lon)

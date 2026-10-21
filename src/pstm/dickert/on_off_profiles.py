@@ -4,16 +4,19 @@
 from __future__ import annotations
 
 import datetime as dt
+from typing import TYPE_CHECKING
 
 import attrs
-import numpy as np
-import numpy.typing as npt
 from loguru import logger
+import numpy as np
 
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
 from pstm.dickert.appliances import Validators
 from pstm.dickert.cycle_profiles import OperationProfiles
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 MAX_PARAMETER_SUM = 3
 MAX_ITERATIONS = 2**16
@@ -84,11 +87,11 @@ class OnOffProfiles(OperationProfiles):
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,  # noqa: ARG002
-        lon: float,  # noqa: ARG002
-        altitude: float,  # noqa: ARG002
-        year: int,  # noqa: ARG002
-        tz: dt.tzinfo,  # noqa: ARG002
+        lat: float,  # ruff: ignore[unused-method-argument]
+        lon: float,  # ruff: ignore[unused-method-argument]
+        altitude: float,  # ruff: ignore[unused-method-argument]
+        year: int,  # ruff: ignore[unused-method-argument]
+        tz: dt.tzinfo,  # ruff: ignore[unused-method-argument]
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         p_base = self._sim_p_distribution(
             distribution_type=self.active_power_distribution_type,

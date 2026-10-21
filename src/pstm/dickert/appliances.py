@@ -15,8 +15,8 @@ from pyochain import Ok
 from pstm.utils.results import Constructible
 
 if t.TYPE_CHECKING:
-    import datetime as dt
     from collections.abc import Sequence
+    import datetime as dt
 
     import numpy.typing as npt
     from pyochain import Result
@@ -47,7 +47,7 @@ class Validators:
     """attrs validators of the appliance levels; attrs reports an invalid field only by raising."""
 
     @staticmethod
-    def pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG004
+    def pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # ruff: ignore[unused-static-method-argument]
         if not -1 <= value <= 1:
             msg = f"Attribute {attribute.name} has to be between -1 and 1, is {value}"
             raise ValueError(msg)
@@ -55,7 +55,7 @@ class Validators:
         return value
 
     @staticmethod
-    def level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG004
+    def level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # ruff: ignore[unused-static-method-argument]
         if not 0 <= value <= 1:
             msg = f"Attribute {attribute.name} has to be between 0 and 1, is {value}"
             raise ValueError(msg)
@@ -233,14 +233,15 @@ class Appliances(Constructible):
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Internal power calculation method.
 
-        Arguments:
-            n_units {int} -- amount of units
-            n_steps {int} -- amount of time steps
-            lat {float} -- latitude of household location
-            lon {float} -- longitude of household location
-            altitude {float} -- altitude of household location
-            year {int} -- year of power profile
-            tz {dt.tzinfo} -- timezone of household location
+        Args:
+            n_units: Amount of units.
+            n_steps: Amount of time steps.
+            generator: Random number generator.
+            lat: Latitude of the household location.
+            lon: Longitude of the household location.
+            altitude: Altitude of the household location.
+            year: Year of the power profile.
+            tz: Time zone of the household location.
 
         Returns:
             tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]] -- active and reactive power

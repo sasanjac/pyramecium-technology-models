@@ -6,9 +6,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import attrs
-import numpy as np
-import numpy.typing as npt
 from loguru import logger
+import numpy as np
 from numpy import ones
 
 from pstm.dickert.appliances import Appliances
@@ -18,6 +17,8 @@ from pstm.dickert.appliances import Validators
 
 if TYPE_CHECKING:
     import datetime as dt
+
+    import numpy.typing as npt
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -44,11 +45,11 @@ class CycleProfiles(OperationProfiles):
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,  # noqa: ARG002
-        lon: float,  # noqa: ARG002
-        altitude: float,  # noqa: ARG002
-        year: int,  # noqa: ARG002
-        tz: dt.tzinfo,  # noqa: ARG002
+        lat: float,  # ruff: ignore[unused-method-argument]
+        lon: float,  # ruff: ignore[unused-method-argument]
+        altitude: float,  # ruff: ignore[unused-method-argument]
+        year: int,  # ruff: ignore[unused-method-argument]
+        tz: dt.tzinfo,  # ruff: ignore[unused-method-argument]
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         p_base = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,

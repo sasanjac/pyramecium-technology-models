@@ -8,11 +8,9 @@ import typing as t
 
 import attrs
 import numpy as np
-import numpy.typing as npt
 import pvlib
 from pyochain import NONE
 from pyochain import Null
-from pyochain import Option
 from pyochain import Some
 
 from pstm.dickert.appliances import Appliances
@@ -20,6 +18,10 @@ from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
 from pstm.dickert.appliances import Validators
 from pstm.utils.dates import Dates
+
+if t.TYPE_CHECKING:
+    import numpy.typing as npt
+    from pyochain import Option
 
 NaT = dt.time(0)
 

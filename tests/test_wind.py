@@ -7,8 +7,8 @@ import zoneinfo as zi
 
 import numpy as np
 import pandas as pd
-import pytest
 from pyochain import Some
+import pytest
 
 from pstm.utils.dates import Dates
 from pstm.wind import MODELCHAIN_DATA
@@ -68,7 +68,7 @@ class TestWindCreation:
             lat=53.5,
             lon=9.5,
         )
-        assert wind.cosphi == 0.9
+        assert wind.cosphi == pytest.approx(0.9)
 
 
 class TestWindRun:
@@ -90,22 +90,18 @@ class TestWindRun:
         # Simulate varying wind speeds
         wind_speed = 8 + 4 * np.sin(np.linspace(0, 4 * np.pi, n))
         # Create multi-level columns as required by windpowerlib
-        columns = pd.MultiIndex.from_tuples(
-            [
-                ("wind_speed", 10),
-                ("temperature", 2),
-                ("pressure", 0),
-                ("roughness_length", 0),
-            ]
-        )
-        data = np.column_stack(
-            [
-                wind_speed,  # wind_speed m/s
-                15 + 5 * rng.random(n) + 273.15,  # temperature K
-                101300 + 1000 * rng.random(n),  # pressure Pa
-                np.full(n, 0.1),  # roughness_length m
-            ]
-        )
+        columns = pd.MultiIndex.from_tuples([
+            ("wind_speed", 10),
+            ("temperature", 2),
+            ("pressure", 0),
+            ("roughness_length", 0),
+        ])
+        data = np.column_stack([
+            wind_speed,  # wind_speed m/s
+            15 + 5 * rng.random(n) + 273.15,  # temperature K
+            101300 + 1000 * rng.random(n),  # pressure Pa
+            np.full(n, 0.1),  # roughness_length m
+        ])
         return pd.DataFrame(data, index=dates, columns=columns)
 
     def test_wind_run_produces_output(self, dates: pd.DatetimeIndex, weather: pd.DataFrame) -> None:
@@ -176,22 +172,18 @@ class TestWindSiteIndependence:
         windpowerlib requires Multi-level column index with (variable, height).
         """
         n = len(dates)
-        columns = pd.MultiIndex.from_tuples(
-            [
-                ("wind_speed", 10),
-                ("temperature", 2),
-                ("pressure", 0),
-                ("roughness_length", 0),
-            ]
-        )
-        data = np.column_stack(
-            [
-                np.full(n, 10.0),  # Constant wind m/s
-                np.full(n, 15.0 + 273.15),  # temperature K
-                np.full(n, 101300.0),  # pressure Pa
-                np.full(n, 0.1),  # roughness_length m
-            ]
-        )
+        columns = pd.MultiIndex.from_tuples([
+            ("wind_speed", 10),
+            ("temperature", 2),
+            ("pressure", 0),
+            ("roughness_length", 0),
+        ])
+        data = np.column_stack([
+            np.full(n, 10.0),  # Constant wind m/s
+            np.full(n, 15.0 + 273.15),  # temperature K
+            np.full(n, 101300.0),  # pressure Pa
+            np.full(n, 0.1),  # roughness_length m
+        ])
         return pd.DataFrame(data, index=dates, columns=columns)
 
     def test_identical_weather_gives_identical_output(self, dates: pd.DatetimeIndex, weather: pd.DataFrame) -> None:

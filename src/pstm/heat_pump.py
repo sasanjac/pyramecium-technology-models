@@ -15,11 +15,13 @@ from pyochain import Err
 from pyochain import Null
 from pyochain import Ok
 from pyochain import Option
-from pyochain import Result
 from pyochain import Some
 
 from pstm.base import Tech
 from pstm.utils.ground import Ground
+
+if t.TYPE_CHECKING:
+    from pyochain import Result
 
 
 class Efficiency(enum.StrEnum):
@@ -122,7 +124,8 @@ class HeatPump(Tech, abc.ABC):
         """
         index = t.cast("pd.DatetimeIndex", temp.index)
         return (
-            self.calc_temp_diff(temp)
+            self
+            .calc_temp_diff(temp)
             .and_then(lambda temp_diff: self._resample(target=temp_diff, index=index))
             .map(lambda temp_diff: self._set_power(self.calc_cop(temp_diff), thermal_demand))
         )
@@ -223,7 +226,8 @@ class ResidentialHeatPump(HeatPump):
 
     def calc_temp_diff(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
         return (
-            self.heating_system.sink_temperature(temp, self.sink_temp)
+            self.heating_system
+            .sink_temperature(temp, self.sink_temp)
             .and_then(lambda sink: self.source_temperature(temp).map(lambda source: sink - source))
             .map(lambda temp_diff: temp_diff.clip(lower=MIN_TEMP_DIFF))
         )
@@ -241,9 +245,11 @@ class ResidentialHeatPump(HeatPump):
 class AirHeatPump(ResidentialHeatPump):
     """Air-source heat pump; the source is the ambient air."""
 
+    @t.override
     def source_temperature(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
         return Ok(temp)
 
+    @t.override
     def cop_curve(self, temp_diff: pd.Series) -> pd.Series:
         return 6.08 - 0.09 * temp_diff + 0.0005 * temp_diff**2
 
@@ -261,6 +267,7 @@ class BrineHeatPump(ResidentialHeatPump):
 
     ground_temp: Option[pd.Series] = NONE
 
+    @t.override
     def source_temperature(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
         match self.ground_temp:
             case Some(ground_temp):
@@ -270,6 +277,7 @@ class BrineHeatPump(ResidentialHeatPump):
 
         return ground.map(lambda ground_temp: ground_temp - BRINE_TEMP_DROP)
 
+    @t.override
     def cop_curve(self, temp_diff: pd.Series) -> pd.Series:
         return 10.29 - 0.21 * temp_diff + 0.0012 * temp_diff**2
 
@@ -278,9 +286,11 @@ class BrineHeatPump(ResidentialHeatPump):
 class WaterHeatPump(ResidentialHeatPump):
     """Groundwater-source heat pump; the source is a constant 10 degC minus 5 K."""
 
+    @t.override
     def source_temperature(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
         return Ok(pd.Series(GROUNDWATER_TEMP - BRINE_TEMP_DROP, index=temp.index))
 
+    @t.override
     def cop_curve(self, temp_diff: pd.Series) -> pd.Series:
         return 9.97 - 0.20 * temp_diff + 0.0012 * temp_diff**2
 

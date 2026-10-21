@@ -18,8 +18,6 @@ from pyochain import option
 from pstm.base import Tech
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
-from pstm.dickert.appliances import DistributionType
-from pstm.dickert.appliances import Phase
 from pstm.dickert.baseline_profiles import BaselineProfiles
 from pstm.dickert.cycle_profiles import CycleProfiles
 from pstm.dickert.lighting_profiles import LightingProfiles
@@ -32,6 +30,9 @@ if t.TYPE_CHECKING:
 
     import numpy.typing as npt
     from pyochain import Result
+
+    from pstm.dickert.appliances import DistributionType
+    from pstm.dickert.appliances import Phase
 
     Array2DF = npt.NDArray[np.float64]
 
@@ -216,7 +217,7 @@ class Households:
             ``Err`` with the error of the first appliance that fails; :attr:`p`
             and :attr:`q` then stay unchanged.
         """
-        from pstm.utils import geo  # noqa: PLC0415 - optional extra geo
+        from pstm.utils import geo  # ruff: ignore[import-outside-top-level] - optional extra geo
 
         with geo.GeoRef(use_clc=False) as georef:
             self.tz = georef.get_time_zone(lat=lat, lon=lon)
@@ -249,17 +250,17 @@ class Households:
 
     @property
     def baseline_appliances(self) -> cabc.Sequence[Appliances]:
-        return self.baseline_profiles + self.cycle_profiles  # type:ignore[operator]
+        return [*self.baseline_profiles, *self.cycle_profiles]
 
     @property
     def appliances(self) -> cabc.Sequence[Appliances]:
-        return (
-            self.baseline_profiles  # type:ignore[operator]
-            + self.cycle_profiles
-            + self.on_off_profiles
-            + self.process_profiles
-            + self.lighting_profiles
-        )
+        return [
+            *self.baseline_profiles,
+            *self.cycle_profiles,
+            *self.on_off_profiles,
+            *self.process_profiles,
+            *self.lighting_profiles,
+        ]
 
     @classmethod
     def from_config(cls, config: ConfigDict) -> Households:

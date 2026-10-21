@@ -7,8 +7,8 @@ import zoneinfo as zi
 
 import numpy as np
 import pandas as pd
-import pytest
 from pyochain import Some
+import pytest
 
 from pstm.heat_pump import EFFICIENCY_OFFSETS
 from pstm.heat_pump import FIELD_CORRECTION
@@ -189,7 +189,7 @@ class TestResidentialCop(HeatPumpCase):
         assert "at least 365 days" in str(hp.run(temp_series).unwrap_err())
 
     def test_field_correction_constant(self) -> None:
-        assert FIELD_CORRECTION == 0.85
+        assert pytest.approx(0.85) == FIELD_CORRECTION
 
 
 class TestRun(HeatPumpCase):
@@ -227,14 +227,14 @@ class TestRun(HeatPumpCase):
         assert cop[: 24 * 31].mean() > -air.thr["low"].to_numpy()[: 24 * 31].mean()
 
     def test_cosphi_default(self, dates: pd.DatetimeIndex) -> None:
-        assert self.air(dates).cosphi == 0.7
+        assert self.air(dates).cosphi == pytest.approx(0.7)
 
 
 class TestIndustrialHeatPump(HeatPumpCase):
     def test_constant_target_temperature_kept(self, dates: pd.DatetimeIndex) -> None:
         hp = IndustrialHeatPump(dates=dates, tz=TZ, power_inst=1, target_temp=90, efficiency="high")
         dt = hp.calc_temp_diff(pd.Series([10.0])).unwrap()
-        assert dt.iloc[0] == 80.0
+        assert dt.iloc[0] == pytest.approx(80.0)
         assert hp.calc_cop(dt).iloc[0] == pytest.approx(80.84 / 80.0**0.76)
 
 

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import zoneinfo as zi
 
 import numpy as np
@@ -11,6 +12,9 @@ import pytest
 from pstm.gas_boiler import GasBoiler
 from pstm.utils.dates import Dates
 
+if TYPE_CHECKING:
+    import pandas as pd
+
 TZ = zi.ZoneInfo("Europe/Berlin")
 
 
@@ -18,11 +22,11 @@ class TestGasBoilerCreation:
     """Test Gas Boiler instance creation."""
 
     @pytest.fixture
-    def dates(self):
+    def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
         return Dates.date_range(tz=TZ, year=2024)[:96]
 
-    def test_gas_boiler_room_heating_ch4(self, dates) -> None:
+    def test_gas_boiler_room_heating_ch4(self, dates: pd.DatetimeIndex) -> None:
         """Test Gas Boiler creation for room heating with CH4."""
         boiler = GasBoiler(
             dates=dates,
@@ -32,11 +36,11 @@ class TestGasBoilerCreation:
             gas_type="CH4",
         )
         assert boiler.power_inst == 20000
-        assert boiler.efficiency == 0.92
+        assert boiler.efficiency == pytest.approx(0.92)
         assert boiler.heating_type == "room"
         assert boiler.gas_type == "CH4"
 
-    def test_gas_boiler_room_heating_h2(self, dates) -> None:
+    def test_gas_boiler_room_heating_h2(self, dates: pd.DatetimeIndex) -> None:
         """Test Gas Boiler creation for room heating with H2."""
         boiler = GasBoiler(
             dates=dates,
@@ -47,7 +51,7 @@ class TestGasBoilerCreation:
         )
         assert boiler.gas_type == "H2"
 
-    def test_gas_boiler_process_low(self, dates) -> None:
+    def test_gas_boiler_process_low(self, dates: pd.DatetimeIndex) -> None:
         """Test Gas Boiler creation for low-temp process heating."""
         boiler = GasBoiler(
             dates=dates,
@@ -58,9 +62,9 @@ class TestGasBoilerCreation:
         )
         assert boiler.heating_type == "process_low"
         # Should set thl
-        assert np.all(boiler.thl["low"].values == -50000)
+        assert np.all(boiler.thl["low"].to_numpy() == -50000)
 
-    def test_gas_boiler_process_high(self, dates) -> None:
+    def test_gas_boiler_process_high(self, dates: pd.DatetimeIndex) -> None:
         """Test Gas Boiler creation for high-temp process heating."""
         boiler = GasBoiler(
             dates=dates,
@@ -71,18 +75,18 @@ class TestGasBoilerCreation:
         )
         assert boiler.heating_type == "process_high"
         # Should set thh
-        assert np.all(boiler.thh["low"].values == -100000)
+        assert np.all(boiler.thh["low"].to_numpy() == -100000)
 
 
 class TestGasBoilerOutputs:
     """Test Gas Boiler thermal and gas outputs."""
 
     @pytest.fixture
-    def dates(self):
+    def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
         return Dates.date_range(tz=TZ, year=2024)[:96]
 
-    def test_room_heating_thr_output(self, dates) -> None:
+    def test_room_heating_thr_output(self, dates: pd.DatetimeIndex) -> None:
         """Test room heating sets thr output."""
         boiler = GasBoiler(
             dates=dates,
@@ -92,9 +96,9 @@ class TestGasBoilerOutputs:
             gas_type="CH4",
         )
         # Room heating should set thr.low to negative (heat output)
-        assert np.all(boiler.thr["low"].values == -20000)
+        assert np.all(boiler.thr["low"].to_numpy() == -20000)
 
-    def test_gas_consumption_ch4(self, dates) -> None:
+    def test_gas_consumption_ch4(self, dates: pd.DatetimeIndex) -> None:
         """Test CH4 gas consumption calculation."""
         power_inst = 20000
         efficiency = 0.92
@@ -107,9 +111,9 @@ class TestGasBoilerOutputs:
         )
         # CH4 consumption should be power / efficiency
         expected_gas = power_inst / efficiency
-        assert np.all(boiler.ch4["high"].values == pytest.approx(expected_gas, rel=0.01))
+        assert np.all(boiler.ch4["high"].to_numpy() == pytest.approx(expected_gas, rel=0.01))
 
-    def test_gas_consumption_h2(self, dates) -> None:
+    def test_gas_consumption_h2(self, dates: pd.DatetimeIndex) -> None:
         """Test H2 gas consumption calculation."""
         power_inst = 15000
         efficiency = 0.90
@@ -122,18 +126,18 @@ class TestGasBoilerOutputs:
         )
         # H2 consumption should be power / efficiency
         expected_gas = power_inst / efficiency
-        assert np.all(boiler.h2["high"].values == pytest.approx(expected_gas, rel=0.01))
+        assert np.all(boiler.h2["high"].to_numpy() == pytest.approx(expected_gas, rel=0.01))
 
 
 class TestGasBoilerInvalidInputs:
     """Test Gas Boiler error handling."""
 
     @pytest.fixture
-    def dates(self):
+    def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
         return Dates.date_range(tz=TZ, year=2024)[:96]
 
-    def test_invalid_heating_type(self, dates) -> None:
+    def test_invalid_heating_type(self, dates: pd.DatetimeIndex) -> None:
         """Test invalid heating type is an error."""
         boiler = GasBoiler.create(
             dates=dates,
@@ -144,7 +148,7 @@ class TestGasBoilerInvalidInputs:
         )
         assert "is not a valid HeatingType" in str(boiler.unwrap_err())
 
-    def test_invalid_gas_type(self, dates) -> None:
+    def test_invalid_gas_type(self, dates: pd.DatetimeIndex) -> None:
         """Test invalid gas type is an error."""
         boiler = GasBoiler.create(
             dates=dates,

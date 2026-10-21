@@ -14,7 +14,7 @@ class TestGetValue:
     @staticmethod
     def _catalog() -> MaStRCatalog:
         catalog = object.__new__(MaStRCatalog)
-        catalog._catalog = pd.DataFrame({"Id": [35, 36], "Wert": ["In Betrieb", "In Planung"]})  # noqa: SLF001
+        catalog._catalog = pd.DataFrame({"Id": [35, 36], "Wert": ["In Betrieb", "In Planung"]})
         return catalog
 
     def test_known_code(self) -> None:

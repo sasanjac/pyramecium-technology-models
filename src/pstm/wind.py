@@ -10,12 +10,12 @@ import attrs
 import loguru
 import numpy as np
 import pandas as pd
-import windpowerlib as wpl
-import windpowerlib.modelchain as wmc
 from pyochain import NONE
 from pyochain import Null
 from pyochain import Option
 from pyochain import Some
+import windpowerlib as wpl
+import windpowerlib.modelchain as wmc
 
 from pstm.base import Tech
 

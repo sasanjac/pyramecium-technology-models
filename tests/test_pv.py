@@ -49,9 +49,9 @@ class TestPVCreation:
             alt=100,
         )
         assert pv.power_inst == 10000
-        assert pv.efficiency_inv == 0.95
-        assert pv.lat == 51.05
-        assert pv.lon == 13.73
+        assert pv.efficiency_inv == pytest.approx(0.95)
+        assert pv.lat == pytest.approx(51.05)
+        assert pv.lon == pytest.approx(13.73)
 
     def test_pv_default_parameters(self, dates: pd.DatetimeIndex) -> None:
         """Test PV default parameters."""
@@ -65,7 +65,7 @@ class TestPVCreation:
         )
         assert pv.surface_tilt == 30
         assert pv.surface_azimuth == 180
-        assert pv.cosphi == 0.9
+        assert pv.cosphi == pytest.approx(0.9)
 
     def test_pv_custom_tilt_azimuth(self, dates: pd.DatetimeIndex) -> None:
         """Test PV with custom tilt and azimuth."""

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import zoneinfo as zi
 
 import numpy as np
@@ -16,6 +17,9 @@ from pstm.ev import DrivingCategory
 from pstm.ev import EVSystem
 from pstm.ev import TypeDay
 from pstm.utils.dates import Dates
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
@@ -67,7 +71,7 @@ class TestDriver:
         """Test number of trips sampling."""
         driver = Driver(daily_mean_distance=30)
         n_trips = driver.number_of_trips(TypeDay.WD)
-        assert n_trips in [0, 1, 2, 3]
+        assert n_trips in {0, 1, 2, 3}
 
 
 class TestCar:
@@ -81,10 +85,10 @@ class TestCar:
             capacity=40,
             charging_power=11.0,
         )
-        assert car.mileage == 15.0
-        assert car.losses == 0.10
+        assert car.mileage == pytest.approx(15.0)
+        assert car.losses == pytest.approx(0.10)
         assert car.capacity == 40
-        assert car.charging_power == 11.0
+        assert car.charging_power == pytest.approx(11.0)
 
 
 class TestChargePoint:
@@ -93,19 +97,19 @@ class TestChargePoint:
     def test_charge_point_creation(self) -> None:
         """Test ChargePoint instance creation."""
         cp = ChargePoint(charging_power_max=22.0)
-        assert cp.charging_power_max == 22.0
+        assert cp.charging_power_max == pytest.approx(22.0)
 
 
 class TestEVSystem:
     """Test EVSystem technology model."""
 
     @pytest.fixture
-    def dates(self):
+    def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
         return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
-    def ev_system(self, dates):
+    def ev_system(self, dates: pd.DatetimeIndex) -> EVSystem:
         """Create EVSystem for testing."""
         driver = Driver(daily_mean_distance=30)
         car = Car(
@@ -123,20 +127,20 @@ class TestEVSystem:
             tz=TZ,
         )
 
-    def test_ev_system_creation(self, ev_system) -> None:
+    def test_ev_system_creation(self, ev_system: EVSystem) -> None:
         """Test EVSystem instance creation."""
         assert ev_system.driver.daily_mean_distance == 30
-        assert ev_system.car.charging_power == 11.0
-        assert ev_system.charge_point.charging_power_max == 22.0
+        assert ev_system.car.charging_power == pytest.approx(11.0)
+        assert ev_system.charge_point.charging_power_max == pytest.approx(22.0)
 
-    def test_ev_system_power_array(self, ev_system) -> None:
+    def test_ev_system_power_array(self, ev_system: EVSystem) -> None:
         """Test power array generation for a day."""
         power = ev_system.power(TypeDay.WD)
         assert len(power) == 96  # 24 hours * 4 quarters
         assert np.all(power >= 0)
         assert np.all(power <= ev_system.car.charging_power)
 
-    def test_ev_system_energy_reasonable(self, ev_system) -> None:
+    def test_ev_system_energy_reasonable(self, ev_system: EVSystem) -> None:
         """Test energy consumption is reasonable."""
         energy_wd = ev_system.energy(TypeDay.WD)
         energy_we = ev_system.energy(TypeDay.WE)
@@ -153,12 +157,12 @@ class TestEVSystemRun:
     """Test EVSystem run method."""
 
     @pytest.fixture
-    def dates_full_year(self):
+    def dates_full_year(self) -> pd.DatetimeIndex:
         """Generate full year dates for testing."""
         return Dates.date_range(tz=TZ, year=2024)
 
     @pytest.fixture
-    def ev_system_full(self, dates_full_year):
+    def ev_system_full(self, dates_full_year: pd.DatetimeIndex) -> EVSystem:
         """Create EVSystem for full year testing."""
         driver = Driver(daily_mean_distance=30)
         car = Car(
@@ -176,16 +180,16 @@ class TestEVSystemRun:
             tz=TZ,
         )
 
-    def test_ev_system_run(self, ev_system_full) -> None:
+    def test_ev_system_run(self, ev_system_full: EVSystem) -> None:
         """Test EVSystem run method populates acp."""
         ev_system_full.run()
         acp_high = ev_system_full.acp["high"]["L1"]
         # acp should have values
         assert not acp_high.isna().all()
         # All values should be non-negative
-        assert np.all(acp_high.values >= 0)
+        assert np.all(acp_high.to_numpy() >= 0)
         # Check max power constraint
-        assert np.all(acp_high.values <= ev_system_full.car.charging_power)
+        assert np.all(acp_high.to_numpy() <= ev_system_full.car.charging_power)
 
 
 class TestCarPresets:
@@ -194,7 +198,7 @@ class TestCarPresets:
     def test_bmw_i3_exists(self) -> None:
         """Test BMW i3 preset exists."""
         assert "BMW i3" in CARS
-        assert CARS["BMW i3"].capacity == 27.2
+        assert CARS["BMW i3"].capacity == pytest.approx(27.2)
 
     def test_vw_egolf_exists(self) -> None:
         """Test VW e-Golf preset exists."""

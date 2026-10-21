@@ -3,23 +3,22 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
+from dataclasses import field
 import datetime as dt
 import json
 import pathlib
 import tempfile
 import typing as t
 import zoneinfo as zi
-from dataclasses import dataclass
-from dataclasses import field
 
+from loguru import logger
 import numpy as np
 import pandas as pd
-from loguru import logger
 from pyochain import NONE
 from pyochain import Err
 from pyochain import Null
 from pyochain import Ok
-from pyochain import Option
 from pyochain import Some
 
 from pstm.utils.dates import Dates
@@ -35,6 +34,7 @@ except ModuleNotFoundError as e:
     raise MissingExtraError(extra) from e
 
 if t.TYPE_CHECKING:
+    from pyochain import Option
     from pyochain import Result
 
     from pstm.utils.geo import GeoRef
