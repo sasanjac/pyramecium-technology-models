@@ -13,6 +13,7 @@ The core installs the technology models. Extras add the access to geo and weathe
 - `geo`: geo references (`pstm.utils.geo.GeoRef`) for climate zones, time zones, altitudes and land cover
 - `weather`: DWD test reference years and NEWA wind data (`pstm.utils.weather`)
 - `mastr`: queries of the Marktstammdatenregister (`pstm.mastr`)
+- `cli`: the conversion scripts of the input data, with `geo` and `weather`
 - `all`: all extras
 
 ```sh
@@ -25,7 +26,7 @@ By default, EPSG:4326 is used.
 
 ## Get Started
 
-Before being able to create time series, there are a few geo files that have to be obtained first. The files can be converted using the provided conversion scripts:
+Before being able to create time series, there are a few geo files that have to be obtained first. The extra `cli` installs the conversion scripts `convert-clc-europe-file`, `convert-dwd-try-files`, `convert-time-zones-file`, `convert-zip-codes-file`, `create-dickert-households` and `create-dwd-try-index-file`; `--help` lists the options of each. The sources of the files:
 
 - Digital Terrain Models:
   -  Germany (20m and 50m): https://sonny.4lima.de/

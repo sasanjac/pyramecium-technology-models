@@ -34,8 +34,6 @@ CONVERTER.register_unstructure_hook_factory(
 JSONPrimitive = bool | float | int | str | None
 JSONType = JSONPrimitive | list[JSONPrimitive] | dict[str, JSONPrimitive]
 
-SRC_PATH = pathlib.Path(__file__).parent.parent.parent
-
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj: JSONType | np.integer | np.floating | np.ndarray) -> JSONType:
@@ -352,7 +350,7 @@ def create(*, input_file: pathlib.Path) -> None:
         hh_c = t.cast("ConfigDict", hh)
         hhs = Households.from_config(hh_c)
         hh_c = CONVERTER.unstructure(hhs)
-        path = SRC_PATH / f"data/household/dickert/hh{j + 1}.json"
+        path = input_file.parent / f"hh{j + 1}.json"
         with path.open(mode="w+", encoding="utf-8") as file_handle:
             json.dump(hh_c, file_handle, cls=NpEncoder)
 
