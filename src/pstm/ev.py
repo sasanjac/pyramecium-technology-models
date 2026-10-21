@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from pstm.base import Tech
-from pstm.utils import dates
+from pstm.utils.dates import Dates
 
 
 class TypeDay(enum.StrEnum):
@@ -202,7 +202,7 @@ class EVSystem(Tech):
         return rv
 
     def run(self) -> None:
-        index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
+        index = Dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
         type_day_start = int(self.dates.weekday[0])
         n_days = len(index) // (24 * 4)  # 365 or 366 (leap year); avoid index-length mismatch
         tds = [TypeDay.WD if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else TypeDay.WE for i in range(n_days)]

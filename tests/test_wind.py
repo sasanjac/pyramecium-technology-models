@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from pyochain import Some
 
-from pstm.utils.dates import date_range
+from pstm.utils.dates import Dates
 from pstm.wind import MODELCHAIN_DATA
 from pstm.wind import MissingArgumentsError
 from pstm.wind import Wind
@@ -24,7 +24,7 @@ class TestWindCreation:
     @pytest.fixture
     def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_wind_creation_with_turbine_type(self, dates: pd.DatetimeIndex) -> None:
         """Test Wind creation with turbine type."""
@@ -77,7 +77,7 @@ class TestWindRun:
     @pytest.fixture
     def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
     def weather(self, dates: pd.DatetimeIndex) -> pd.DataFrame:
@@ -167,7 +167,7 @@ class TestWindSiteIndependence:
     @pytest.fixture
     def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
     def weather(self, dates: pd.DatetimeIndex) -> pd.DataFrame:
@@ -228,11 +228,13 @@ class TestWindModelChainData:
     """The model chain of a turbine follows its ``modelchain_data``."""
 
     def test_default_is_the_hellman_chain(self) -> None:
-        wind = Wind(dates=date_range(tz=TZ, year=2023)[:4], hub_height=100, power_inst=Some(2e6), lat=54.8, lon=13.8)
+        wind = Wind(
+            dates=Dates.date_range(tz=TZ, year=2023)[:4], hub_height=100, power_inst=Some(2e6), lat=54.8, lon=13.8
+        )
         assert wind.mc.wind_speed_model == "hellman"
 
     def test_a_multi_height_chain_interpolates_between_levels(self) -> None:
-        dates = date_range(tz=TZ, year=2023)[:4]
+        dates = Dates.date_range(tz=TZ, year=2023)[:4]
         data = {**MODELCHAIN_DATA, "wind_speed_model": "log_interpolation_extrapolation"}
         wind = Wind(dates=dates, hub_height=100, power_inst=Some(2e6), lat=54.8, lon=13.8, modelchain_data=data)
         assert wind.mc.wind_speed_model == "log_interpolation_extrapolation"

@@ -11,7 +11,7 @@ import numpy.typing as npt
 
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
-from pstm.dickert.appliances import validate_level
+from pstm.dickert.appliances import Validators
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class BaselineProfiles(Appliances):
-    power_variation: float = attrs.field(validator=validate_level)
+    power_variation: float = attrs.field(validator=Validators.level)
     power_variation_max: float
 
     def _run(

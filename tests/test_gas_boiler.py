@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from pstm.gas_boiler import GasBoiler
-from pstm.utils.dates import date_range
+from pstm.utils.dates import Dates
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
@@ -20,7 +20,7 @@ class TestGasBoilerCreation:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_gas_boiler_room_heating_ch4(self, dates) -> None:
         """Test Gas Boiler creation for room heating with CH4."""
@@ -80,7 +80,7 @@ class TestGasBoilerOutputs:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_room_heating_thr_output(self, dates) -> None:
         """Test room heating sets thr output."""
@@ -131,7 +131,7 @@ class TestGasBoilerInvalidInputs:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_invalid_heating_type(self, dates) -> None:
         """Test invalid heating type is an error."""

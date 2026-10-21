@@ -19,7 +19,7 @@ from pyochain import Result
 from pyochain import Some
 
 from pstm.base import Tech
-from pstm.utils.ground import kusuda_ground_temperature
+from pstm.utils.ground import Ground
 
 
 class Efficiency(enum.StrEnum):
@@ -38,12 +38,43 @@ class IndustrialEfficiency(enum.StrEnum):
 
 
 class HeatingSystem(enum.StrEnum):
-    """Sink of :func:`sink_temperature`; ``CONSTANT`` takes its temperature from ``sink_temp``."""
+    """Heat distribution of a residential heat pump; ``CONSTANT`` takes its temperature from ``sink_temp``."""
 
     RADIATOR = "radiator"
     FLOOR = "floor"
     WATER = "water"
     CONSTANT = "constant"
+
+    def sink_temperature(self, temp_amb: pd.Series, sink_temp: Option[float] = NONE) -> Result[pd.Series, ValueError]:
+        """Sink temperature of eq. (6) of Ruhnau et al. (2019), or a constant sink.
+
+        Radiator heating supplies ``40 - 1.0 T_amb``, floor heating
+        ``30 - 0.5 T_amb`` and hot-water heating a constant 50 degC.  The
+        ``constant`` sink supplies ``sink_temp`` at every step, e.g. the supply
+        temperature of a district-heating loop.  It lies outside the residential
+        scope of the source.
+
+        Args:
+            temp_amb: Ambient air temperature in degC.
+            sink_temp: Sink temperature in degC of the ``constant`` sink.
+
+        Returns:
+            ``Ok`` with the sink temperature in degC on the index of ``temp_amb``.
+            ``Err`` if ``sink_temp`` is given for another sink than ``constant``
+            or missing for it.
+        """
+        match self, sink_temp:
+            case HeatingSystem.CONSTANT, Some(temp):
+                return Ok(pd.Series(float(temp), index=temp_amb.index))
+            case HeatingSystem.RADIATOR, Null():
+                return Ok(40.0 - 1.0 * temp_amb)
+            case HeatingSystem.FLOOR, Null():
+                return Ok(30.0 - 0.5 * temp_amb)
+            case HeatingSystem.WATER, Null():
+                return Ok(pd.Series(WATER_HEATING_TEMP, index=temp_amb.index))
+            case _:
+                msg = f"sink_temp is required for the constant sink and only for it, got {self!r} with {sink_temp!r}."
+                return Err(ValueError(msg))
 
 
 EFFICIENCY_OFFSETS = {
@@ -71,45 +102,6 @@ GROUNDWATER_TEMP = 10.0
 
 WATER_HEATING_TEMP = 50.0
 """Sink temperature in degC of domestic hot-water heating."""
-
-
-def sink_temperature(
-    heating_system: HeatingSystem,
-    temp_amb: pd.Series,
-    sink_temp: Option[float] = NONE,
-) -> Result[pd.Series, ValueError]:
-    """Sink temperature of eq. (6) of Ruhnau et al. (2019), or a constant sink.
-
-    Radiator heating supplies ``40 - 1.0 T_amb``, floor heating
-    ``30 - 0.5 T_amb`` and hot-water heating a constant 50 degC.  The
-    ``constant`` sink supplies ``sink_temp`` at every step, e.g. the supply
-    temperature of a district-heating loop.  It lies outside the residential
-    scope of the source.
-
-    Args:
-        heating_system: Heat distribution the pump supplies.
-        temp_amb: Ambient air temperature in degC.
-        sink_temp: Sink temperature in degC of the ``constant`` sink.
-
-    Returns:
-        ``Ok`` with the sink temperature in degC on the index of ``temp_amb``.
-        ``Err`` if ``heating_system`` is unknown, or if ``sink_temp`` is
-        given for another sink than ``constant`` or missing for it.
-    """
-    match heating_system, sink_temp:
-        case HeatingSystem.CONSTANT, Some(temp):
-            return Ok(pd.Series(float(temp), index=temp_amb.index))
-        case HeatingSystem.RADIATOR, Null():
-            return Ok(40.0 - 1.0 * temp_amb)
-        case HeatingSystem.FLOOR, Null():
-            return Ok(30.0 - 0.5 * temp_amb)
-        case HeatingSystem.WATER, Null():
-            return Ok(pd.Series(WATER_HEATING_TEMP, index=temp_amb.index))
-        case HeatingSystem(), _:
-            msg = f"sink_temp is required for the constant sink and only for it, got {heating_system!r} with {sink_temp!r}."
-            return Err(ValueError(msg))
-        case _:
-            return Err(ValueError(f"Unknown heating system {heating_system!r}."))
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -203,7 +195,7 @@ class ResidentialHeatPump(HeatPump):
     @sink_temp.validator
     def _check_sink_temp(self, _attribute: attrs.Attribute, value: Option[float]) -> None:
         # attrs reports an invalid field only by raising; ``create`` returns it as ``Err``.
-        match sink_temperature(self.heating_system, pd.Series(dtype=np.float64), value):
+        match self.heating_system.sink_temperature(pd.Series(dtype=np.float64), value):
             case Err(error):
                 raise error
             case Ok():
@@ -231,7 +223,7 @@ class ResidentialHeatPump(HeatPump):
 
     def calc_temp_diff(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
         return (
-            sink_temperature(self.heating_system, temp, self.sink_temp)
+            self.heating_system.sink_temperature(temp, self.sink_temp)
             .and_then(lambda sink: self.source_temperature(temp).map(lambda source: sink - source))
             .map(lambda temp_diff: temp_diff.clip(lower=MIN_TEMP_DIFF))
         )
@@ -263,7 +255,7 @@ class BrineHeatPump(ResidentialHeatPump):
     Ruhnau et al. (2019) take the ground temperature from ERA-Interim soil
     level 4 (1.00 m to 2.89 m).  Without a soil series (``ground_temp`` is
     ``NONE``) the ground temperature at the midpoint of that layer follows from
-    the air temperature through :func:`pstm.utils.ground.kusuda_ground_temperature`,
+    the air temperature through :meth:`pstm.utils.ground.Ground.kusuda_ground_temperature`,
     which needs at least one year of air temperature.
     """
 
@@ -274,7 +266,7 @@ class BrineHeatPump(ResidentialHeatPump):
             case Some(ground_temp):
                 ground: Result[pd.Series, ValueError] = Ok(ground_temp.reindex(temp.index))
             case Null():
-                ground = kusuda_ground_temperature(temp)
+                ground = Ground.kusuda_ground_temperature(temp)
 
         return ground.map(lambda ground_temp: ground_temp - BRINE_TEMP_DROP)
 

@@ -20,7 +20,7 @@ from pyochain import Option
 from pyochain import Some
 
 from pstm.base import Tech
-from pstm.utils import dates
+from pstm.utils.dates import Dates
 
 if t.TYPE_CHECKING:
     import numpy.typing as npt
@@ -88,11 +88,6 @@ POWER_FACTORS = [  # Moller et al - Probabilistic household load model for unbal
 ]
 
 
-def load_json_from_file(path: pathlib.Path) -> JSONTypes:
-    with path.open(encoding="utf-8") as f:
-        return t.cast("JSONTypes", json.load(f))
-
-
 DATA_PATH = SRC_PATH / "data/household/vdi4655"
 
 POWER_CONVERSION_FACTORS = {
@@ -144,6 +139,11 @@ class Household(Tech):
         self._zone = zone
         self.type_days = self.type_days_mapping[zone]
 
+    @staticmethod
+    def load_json_from_file(path: pathlib.Path) -> JSONTypes:
+        with path.open(encoding="utf-8") as f:
+            return t.cast("JSONTypes", json.load(f))
+
     def _init_data(self) -> None:
         factors_mapping_paths = {
             house_type: {
@@ -156,7 +156,7 @@ class Household(Tech):
             house_type: {
                 building_type: t.cast(
                     "FactorsMapping",
-                    load_json_from_file(factors_mapping_paths[house_type][building_type]),
+                    Household.load_json_from_file(factors_mapping_paths[house_type][building_type]),
                 )
                 for building_type in BuildingType
             }
@@ -174,7 +174,7 @@ class Household(Tech):
             house_type: {
                 building_type: t.cast(
                     "ProfilesMapping",
-                    load_json_from_file(profiles_mapping_paths[house_type][building_type]),
+                    Household.load_json_from_file(profiles_mapping_paths[house_type][building_type]),
                 )
                 for building_type in BuildingType
             }
@@ -182,7 +182,7 @@ class Household(Tech):
         }
 
         type_days_path = self.data_path / "type_days.json"
-        self.type_days_mapping = t.cast("TypeDaysMapping", load_json_from_file(type_days_path))
+        self.type_days_mapping = t.cast("TypeDaysMapping", Household.load_json_from_file(type_days_path))
 
     def run(
         self,
@@ -197,7 +197,7 @@ class Household(Tech):
             ``Err`` if a profile cannot be moved onto :attr:`dates`; the
             thermal profiles are then written and the electrical ones are not.
         """
-        index = dates.date_range(self.tz, freq=dt.timedelta(seconds=self.freq), year=self.dates.year[0])
+        index = Dates.date_range(self.tz, freq=dt.timedelta(seconds=self.freq), year=self.dates.year[0])
         result: Result[None, ValueError] = Ok(None)
         if thermal is True:
             result = result.and_then(lambda _: self._run_thermal(index, random_shift=random_shift))

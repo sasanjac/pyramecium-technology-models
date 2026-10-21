@@ -68,15 +68,6 @@ DEFAULT_WEATHER_GEN_FILES_PATH = SRC_PATH / "data/weather/weather"
 DEFAULT_ZIP_CODES_FILE_PATH = SRC_PATH / "data/geo/zip_codes_germany_epsg4326.feather"
 
 
-async def get_altitude_from_api(lat: float, lon: float) -> float:
-    async with (
-        aiohttp.ClientSession() as session,
-        session.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=aiohttp.ClientTimeout(total=5)) as response,
-    ):
-        json_body = await response.json()
-        return json_body["results"][0]["altitude"]
-
-
 @attrs.define(auto_attribs=True, kw_only=True, slots=False, unsafe_hash=True)
 class GeoRef:
     zip_codes_file_path: pathlib.Path = attrs.field(default=DEFAULT_ZIP_CODES_FILE_PATH, hash=True)
@@ -190,6 +181,15 @@ class GeoRef:
         northing, easting = self._transformer_3034.transform(xx=lat, yy=lon)
         closest_index = distance.cdist([(northing, easting)], self._dwd_try_nodes).argmin()
         return Ok(self._dwd_try_files[closest_index])
+
+    @staticmethod
+    async def get_altitude_from_api(lat: float, lon: float) -> float:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(ALTITUDE_SERVICE_URL.format(lat, lon), timeout=aiohttp.ClientTimeout(total=5)) as response,
+        ):
+            json_body = await response.json()
+            return json_body["results"][0]["altitude"]
 
     def get_altitude(self, lat: float, lon: float) -> float:
         lat, lon = self._transformer_25832.transform(xx=lat, yy=lon)

@@ -38,7 +38,7 @@ class MaStRCatalog:
     path: pathlib.Path
 
     def __attrs_post_init__(self) -> None:
-        self._catalog = import_xml(self.path)
+        self._catalog = MaStRFile.import_xml(self.path)
 
     def get_code(self, code_str: str) -> int:
         condition = self._catalog["Wert"] == code_str
@@ -66,9 +66,9 @@ class MaStRConverter:
     def __attrs_post_init__(self) -> None:
         match self.n_files:
             case Some(n_files):
-                self.dataframe = import_xmls(self.path, n_files)
+                self.dataframe = MaStRFile.import_xmls(self.path, n_files)
             case Null():
-                self.dataframe = import_xml(self.path)
+                self.dataframe = MaStRFile.import_xml(self.path)
 
         self.catalog = MaStRCatalog(path=CATALOG_PATH)
         columns = DEFAULT_COLUMNS + self.columns_extra
@@ -76,7 +76,7 @@ class MaStRConverter:
         self.dataframe = self._finalize(self.dataframe, columns, conds)
 
     def export(self) -> None:
-        export_dataframe(self.dataframe, self.export_path)
+        MaStRFile.export_dataframe(self.dataframe, self.export_path)
 
     def _create_conds(self) -> pd.Series:
         code_in_operation = self.catalog.get_code("In Betrieb")
@@ -108,46 +108,51 @@ class MaStRConverter:
         return dataframe
 
 
-def import_xmls(path: pathlib.Path, n_files: int) -> pd.DataFrame:
-    dfs = [import_xml(path.with_name(f"{path.name}_{i + 1}.xml")) for i in range(n_files)]
-    return pd.concat(dfs)
+class MaStRFile:
+    """Reading and writing of MaStR exports."""
 
+    @staticmethod
+    def import_xmls(path: pathlib.Path, n_files: int) -> pd.DataFrame:
+        dfs = [MaStRFile.import_xml(path.with_name(f"{path.name}_{i + 1}.xml")) for i in range(n_files)]
+        return pd.concat(dfs)
 
-def import_xml(path: pathlib.Path) -> pd.DataFrame:
-    return pd.read_xml(path, encoding="UTF-16")
+    @staticmethod
+    def import_xml(path: pathlib.Path) -> pd.DataFrame:
+        return pd.read_xml(path, encoding="UTF-16")
 
+    @staticmethod
+    def export_dataframe(dataframe: pd.DataFrame, export_path: pathlib.Path) -> None:
+        dataframe.to_parquet(
+            export_path,
+            compression="gzip",
+        )
 
-def export_dataframe(dataframe: pd.DataFrame, export_path: pathlib.Path) -> None:
-    dataframe.to_parquet(
-        export_path,
-        compression="gzip",
-    )
-
-
-def main() -> None:
-    data: list[InputData] = [
-        {
-            "path": SRC_PATH / "data/mastr/EinheitenSolar",
-            "export_path": SRC_PATH / "data/mastr/20210727-EinheitenSolar_stripped.parquet.gzip",
-            "n_files": Some(21),
-        },
-        {
-            "path": SRC_PATH / "data/mastr/EinheitenWind.xml",
-            "export_path": SRC_PATH / "data/mastr/20210727-EinheitenWindOnshore_stripped.parquet.gzip",
-            "columns_extra": ["Nabenhoehe", "Hersteller", "Typenbezeichnung"],
-            "conds_extra": [("Lage", "Windkraft an Land")],
-        },
-        {
-            "path": SRC_PATH / "data/mastr/EinheitenWind.xml",
-            "export_path": SRC_PATH / "data/mastr/20210727-EinheitenWindOffshore_stripped.parquet.gzip",
-            "columns_extra": ["Nabenhoehe", "Hersteller", "Typenbezeichnung"],
-            "conds_extra": [("Lage", "Windkraft auf See")],
-        },
-    ]
-    for datum in data:
-        mastr = MaStRConverter(**datum)
-        mastr.export()
+    @staticmethod
+    def main() -> None:
+        """Convert the solar and the onshore and offshore wind exports of 2021-07-27."""
+        data: list[InputData] = [
+            {
+                "path": SRC_PATH / "data/mastr/EinheitenSolar",
+                "export_path": SRC_PATH / "data/mastr/20210727-EinheitenSolar_stripped.parquet.gzip",
+                "n_files": Some(21),
+            },
+            {
+                "path": SRC_PATH / "data/mastr/EinheitenWind.xml",
+                "export_path": SRC_PATH / "data/mastr/20210727-EinheitenWindOnshore_stripped.parquet.gzip",
+                "columns_extra": ["Nabenhoehe", "Hersteller", "Typenbezeichnung"],
+                "conds_extra": [("Lage", "Windkraft an Land")],
+            },
+            {
+                "path": SRC_PATH / "data/mastr/EinheitenWind.xml",
+                "export_path": SRC_PATH / "data/mastr/20210727-EinheitenWindOffshore_stripped.parquet.gzip",
+                "columns_extra": ["Nabenhoehe", "Hersteller", "Typenbezeichnung"],
+                "conds_extra": [("Lage", "Windkraft auf See")],
+            },
+        ]
+        for datum in data:
+            mastr = MaStRConverter(**datum)
+            mastr.export()
 
 
 if __name__ == "__main__":
-    main()
+    MaStRFile.main()

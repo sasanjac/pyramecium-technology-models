@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 
 from pstm.pv import PV
-from pstm.utils.dates import date_range
+from pstm.utils.dates import Dates
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
@@ -21,7 +21,7 @@ class TestPVCreation:
     @pytest.fixture
     def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)
+        return Dates.date_range(tz=TZ, year=2024)
 
     @pytest.fixture
     def weather(self, dates: pd.DatetimeIndex) -> pd.DataFrame:
@@ -104,7 +104,7 @@ class TestPVRun:
     @pytest.fixture
     def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing (shorter for faster tests)."""
-        return date_range(tz=TZ, year=2024)[:96]  # 1 day
+        return Dates.date_range(tz=TZ, year=2024)[:96]  # 1 day
 
     @pytest.fixture
     def weather(self, dates: pd.DatetimeIndex) -> pd.DataFrame:
@@ -164,7 +164,7 @@ class TestPVFromEfficiency:
     @pytest.fixture
     def dates(self) -> pd.DatetimeIndex:
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_from_efficiency_and_area(self, dates: pd.DatetimeIndex) -> None:
         """Test creating PV from efficiency and area."""

@@ -10,18 +10,18 @@ from pyochain import Some
 from pstm.mastr_converter import MaStRCatalog
 
 
-def _catalog() -> MaStRCatalog:
-    catalog = object.__new__(MaStRCatalog)
-    catalog._catalog = pd.DataFrame({"Id": [35, 36], "Wert": ["In Betrieb", "In Planung"]})  # noqa: SLF001
-    return catalog
-
-
 class TestGetValue:
+    @staticmethod
+    def _catalog() -> MaStRCatalog:
+        catalog = object.__new__(MaStRCatalog)
+        catalog._catalog = pd.DataFrame({"Id": [35, 36], "Wert": ["In Betrieb", "In Planung"]})  # noqa: SLF001
+        return catalog
+
     def test_known_code(self) -> None:
-        assert _catalog().get_value(35.0) == Some("In Betrieb")
+        assert self._catalog().get_value(35.0) == Some("In Betrieb")
 
     def test_unknown_code_is_none(self) -> None:
-        assert _catalog().get_value(99.0) == NONE
+        assert self._catalog().get_value(99.0) == NONE
 
     def test_missing_code_is_none(self) -> None:
-        assert _catalog().get_value(float("nan")) == NONE
+        assert self._catalog().get_value(float("nan")) == NONE

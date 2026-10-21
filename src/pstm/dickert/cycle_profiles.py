@@ -14,8 +14,7 @@ from numpy import ones
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
-from pstm.dickert.appliances import validate_level
-from pstm.dickert.appliances import validate_pm_level
+from pstm.dickert.appliances import Validators
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -28,7 +27,7 @@ class OperationProfiles(Appliances):
     operation_parameter_1: float
     operation_parameter_2: float
     operation_parameter_3: float
-    operation_variation: float = attrs.field(validator=validate_level)
+    operation_variation: float = attrs.field(validator=Validators.level)
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -37,7 +36,7 @@ class CycleProfiles(OperationProfiles):
     period_parameter_1: float
     period_parameter_2: float
     period_parameter_3: float
-    period_variation: float = attrs.field(validator=validate_pm_level)
+    period_variation: float = attrs.field(validator=Validators.pm_level)
 
     def _run(
         self,

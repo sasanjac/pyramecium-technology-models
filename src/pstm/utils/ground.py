@@ -50,6 +50,7 @@ Ruhnau et al. (2019) take the ground-source temperature from this layer.
 
 _MIN_DAYS = 365
 
+
 class Ground:
     @staticmethod
     def kusuda_temperature(
@@ -84,12 +85,10 @@ class Ground:
             mean - amplitude * damping * np.cos(2 * np.pi / period * (day_arr - phase - lag)),
         )
 
-
     @staticmethod
     def _day_of_year(index: pd.DatetimeIndex) -> npt.NDArray[np.float64]:
         hours = index.hour.to_numpy() + index.minute.to_numpy() / 60 + index.second.to_numpy() / 3600
         return t.cast("npt.NDArray[np.float64]", (index.dayofyear.to_numpy() - 1) + hours / 24)
-
 
     @staticmethod
     def fit_surface_harmonic(
@@ -126,7 +125,6 @@ class Ground:
         phase = float(np.mod(np.arctan2(-coef_sin, -coef_cos) / omega, period))
         return Ok((mean, amplitude, phase))
 
-
     @staticmethod
     def kusuda_ground_temperature(
         temp_air: pd.Series,
@@ -140,7 +138,7 @@ class Ground:
         The surface parameters of eq. (3) are taken from the air temperature:
         ``A`` is its annual mean, which the report finds "very close to the
         annual average outdoor air temperature" of the earth.  ``B0`` and ``P0``
-        come from the first-harmonic fit of :func:`fit_surface_harmonic`.  The
+        come from the first-harmonic fit of :meth:`fit_surface_harmonic`.  The
         report finds the surface amplitude poorly correlated with the air
         amplitude, so ``B0`` taken from the air temperature is an approximation.
 
@@ -157,8 +155,8 @@ class Ground:
         index = t.cast("pd.DatetimeIndex", temp_air.index)
 
         def ground(mean: float, amplitude: float, phase: float) -> pd.Series:
-            values = kusuda_temperature(
-                _day_of_year(index),
+            values = Ground.kusuda_temperature(
+                Ground._day_of_year(index),
                 mean=mean,
                 amplitude=amplitude,
                 phase=phase,
@@ -168,4 +166,4 @@ class Ground:
             )
             return pd.Series(values, index=index, name="temp_ground_celsius")
 
-        return fit_surface_harmonic(temp_air, period=period).map_star(ground)
+        return Ground.fit_surface_harmonic(temp_air, period=period).map_star(ground)

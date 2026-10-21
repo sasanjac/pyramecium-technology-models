@@ -22,7 +22,7 @@ from pyochain import Ok
 from pyochain import Option
 from pyochain import Some
 
-from pstm.utils import dates
+from pstm.utils.dates import Dates
 from pstm.utils.exceptions import MissingExtraError
 
 try:
@@ -68,7 +68,7 @@ class WeatherGenerator:
     year: int = 2050
 
     def __post_init__(self) -> None:
-        self.times = dates.date_range(self.tz, self.freq, year=self.year)
+        self.times = Dates.date_range(self.tz, self.freq, year=self.year)
 
     @property
     def weather_at_pv_module(self) -> pd.DataFrame:
@@ -139,9 +139,9 @@ class WeatherGenerator:
         weather = weather.dropna()
         tz_ = tz.unwrap_or_else(lambda: georef.get_time_zone(lat=lat, lon=lon))
         alt_ = alt.unwrap_or_else(lambda: georef.get_altitude(lat=lat, lon=lon))
-        weather.index = index.unwrap_or_else(lambda: dates.date_range(tz_, freq=freq, year=year))
+        weather.index = index.unwrap_or_else(lambda: Dates.date_range(tz_, freq=freq, year=year))
         if freq != dt.timedelta(hours=1):
-            new_index = dates.date_range(tz_, freq, year=year)
+            new_index = Dates.date_range(tz_, freq, year=year)
             # resample().mean() leaves the newly created sub-hourly bins as NaN; reindex(method="ffill")
             # cannot fill them because the labels already exist, so forward-fill the values explicitly.
             weather = weather.resample(freq).mean().reindex(new_index).ffill()
@@ -171,7 +171,7 @@ class WeatherGenerator:
         freq = dt.timedelta(seconds=int(metadata["freq"]))
         alt = metadata["alt"]
         tz = zi.ZoneInfo(metadata["tz"])
-        dataframe.index = dates.date_range(year=metadata["year"], freq=freq, tz=tz)
+        dataframe.index = Dates.date_range(year=metadata["year"], freq=freq, tz=tz)
         transformer = pyproj.Transformer.from_crs("EPSG:3034", "EPSG:4326")
         lat, lon = transformer.transform(xx=metadata["lat"], yy=metadata["lon"])
         return WeatherGenerator(

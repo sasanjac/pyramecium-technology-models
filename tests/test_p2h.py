@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from pstm.p2h import Power2Heat
-from pstm.utils.dates import date_range
+from pstm.utils.dates import Dates
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
@@ -20,7 +20,7 @@ class TestPower2HeatCreation:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_p2h_room_heating(self, dates) -> None:
         """Test Power2Heat creation for room heating."""
@@ -61,7 +61,7 @@ class TestPower2HeatOutputs:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_room_heating_thr_output(self, dates) -> None:
         """Test room heating sets thr output correctly."""
@@ -112,7 +112,7 @@ class TestPower2HeatElectricalConsumption:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_acp_consumption(self, dates) -> None:
         """Test electrical power consumption (acp.high)."""
@@ -158,7 +158,7 @@ class TestPower2HeatInvalidInputs:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     def test_invalid_heating_type(self, dates) -> None:
         """Test invalid heating type is an error."""

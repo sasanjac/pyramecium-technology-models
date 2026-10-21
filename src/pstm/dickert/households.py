@@ -25,7 +25,7 @@ from pstm.dickert.cycle_profiles import CycleProfiles
 from pstm.dickert.lighting_profiles import LightingProfiles
 from pstm.dickert.on_off_profiles import OnOffProfiles
 from pstm.dickert.process_profiles import ProcessProfiles
-from pstm.utils import dates
+from pstm.utils.dates import Dates
 
 if t.TYPE_CHECKING:
     import pathlib
@@ -303,7 +303,7 @@ class Households:
         p, self.p = (self.p[:, 0, :], self.p[:, 1:, :])
         q, self.q = (self.q[:, 0, :], self.q[:, 1:, :])
         step_length = Constants.MINUTES_PER_YEAR / self.n_steps
-        index = dates.date_range(tz=self.tz, year=self.year, freq=dt.timedelta(minutes=step_length))
+        index = Dates.date_range(tz=self.tz, year=self.year, freq=dt.timedelta(minutes=step_length))
         dfp = pd.DataFrame(p, index=index).resample(rule=freq).mean()
         dfq = pd.DataFrame(q, index=index).resample(rule=freq).mean()
 

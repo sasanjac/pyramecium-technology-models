@@ -12,8 +12,7 @@ from loguru import logger
 
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
-from pstm.dickert.appliances import validate_level
-from pstm.dickert.appliances import validate_level_sequence
+from pstm.dickert.appliances import Validators
 from pstm.dickert.cycle_profiles import OperationProfiles
 
 MAX_PARAMETER_SUM = 3
@@ -28,7 +27,7 @@ class OnOffProfiles(OperationProfiles):
     usage_parameter_1: float
     usage_parameter_2: float
     usage_parameter_3: float
-    usage_variation: float = attrs.field(validator=validate_level)
+    usage_variation: float = attrs.field(validator=Validators.level)
     time_on_distribution_types: tuple[
         DistributionType,
         DistributionType,
@@ -54,12 +53,12 @@ class OnOffProfiles(OperationProfiles):
         dt.time,
     ]
     time_on_parameters_3: tuple[float, float, float, float, float, float] = attrs.field(
-        validator=validate_level_sequence,
+        validator=Validators.level_sequence,
     )
-    probability_1: float = attrs.field(validator=validate_level)
-    probability_2: float = attrs.field(validator=validate_level)
-    probability_3: float = attrs.field(validator=validate_level)
-    probability_4: float = attrs.field(validator=validate_level)
+    probability_1: float = attrs.field(validator=Validators.level)
+    probability_2: float = attrs.field(validator=Validators.level)
+    probability_3: float = attrs.field(validator=Validators.level)
+    probability_4: float = attrs.field(validator=Validators.level)
     use_probability: bool = attrs.field(init=False, repr=False)
 
     @use_probability.default

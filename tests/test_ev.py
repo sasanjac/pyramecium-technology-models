@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 """Unit tests for Electric Vehicle technology model."""
 
 from __future__ import annotations
@@ -12,8 +12,10 @@ from pstm.ev import CARS
 from pstm.ev import Car
 from pstm.ev import ChargePoint
 from pstm.ev import Driver
+from pstm.ev import DrivingCategory
 from pstm.ev import EVSystem
-from pstm.utils.dates import date_range
+from pstm.ev import TypeDay
+from pstm.utils.dates import Dates
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
@@ -40,19 +42,19 @@ class TestDriver:
         """Test low driving category classification."""
         # < 10_000 km/year means < ~27.4 km/day
         driver = Driver(daily_mean_distance=10)
-        assert driver.driving_category == "low"
+        assert driver.driving_category is DrivingCategory.LOW
 
     def test_driving_category_medium(self) -> None:
         """Test medium driving category classification."""
         # 10_000 - 20_000 km/year means ~27.4 - ~54.8 km/day
         driver = Driver(daily_mean_distance=40)
-        assert driver.driving_category == "medium"
+        assert driver.driving_category is DrivingCategory.MEDIUM
 
     def test_driving_category_high(self) -> None:
         """Test high driving category classification."""
         # >= 20_000 km/year means >= ~54.8 km/day
         driver = Driver(daily_mean_distance=60)
-        assert driver.driving_category == "high"
+        assert driver.driving_category is DrivingCategory.HIGH
 
     def test_distance_distribution(self) -> None:
         """Test distance distribution sampling."""
@@ -64,7 +66,7 @@ class TestDriver:
     def test_number_of_trips(self) -> None:
         """Test number of trips sampling."""
         driver = Driver(daily_mean_distance=30)
-        n_trips = driver.number_of_trips("WD")
+        n_trips = driver.number_of_trips(TypeDay.WD)
         assert n_trips in [0, 1, 2, 3]
 
 
@@ -100,7 +102,7 @@ class TestEVSystem:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
     def ev_system(self, dates):
@@ -129,15 +131,15 @@ class TestEVSystem:
 
     def test_ev_system_power_array(self, ev_system) -> None:
         """Test power array generation for a day."""
-        power = ev_system.power("WD")
+        power = ev_system.power(TypeDay.WD)
         assert len(power) == 96  # 24 hours * 4 quarters
         assert np.all(power >= 0)
         assert np.all(power <= ev_system.car.charging_power)
 
     def test_ev_system_energy_reasonable(self, ev_system) -> None:
         """Test energy consumption is reasonable."""
-        energy_wd = ev_system.energy("WD")
-        energy_we = ev_system.energy("WE")
+        energy_wd = ev_system.energy(TypeDay.WD)
+        energy_we = ev_system.energy(TypeDay.WE)
         # Energy should be non-negative
         assert energy_wd >= 0
         assert energy_we >= 0
@@ -153,7 +155,7 @@ class TestEVSystemRun:
     @pytest.fixture
     def dates_full_year(self):
         """Generate full year dates for testing."""
-        return date_range(tz=TZ, year=2024)
+        return Dates.date_range(tz=TZ, year=2024)
 
     @pytest.fixture
     def ev_system_full(self, dates_full_year):

@@ -11,7 +11,7 @@ import pytest
 from pyochain import Some
 
 from pstm.demand import SeriesDemand
-from pstm.utils.dates import date_range
+from pstm.utils.dates import Dates
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
@@ -22,7 +22,7 @@ class TestSeriesDemandCreation:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
     def sample_series(self, dates):
@@ -71,7 +71,7 @@ class TestSeriesDemandFactors:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
     def sample_series(self, dates):
@@ -153,7 +153,7 @@ class TestSeriesDemandReactivePower:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
     def sample_series(self, dates):
@@ -221,7 +221,7 @@ class TestSeriesDemandAllOutputs:
     @pytest.fixture
     def dates(self):
         """Generate dates for testing."""
-        return date_range(tz=TZ, year=2024)[:96]
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
     @pytest.fixture
     def sample_series(self, dates):

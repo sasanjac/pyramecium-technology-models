@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 """Unit tests for VDI4655 Household model."""
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from pstm.household_vdi4655 import INSULATION_STANDARDS
 from pstm.household_vdi4655 import POWER_CONVERSION_FACTORS
 from pstm.household_vdi4655 import POWER_FACTORS
 from pstm.household_vdi4655 import WATER_DEMAND
+from pstm.household_vdi4655 import HouseType
 
 
 class TestElectricityDemandConstants:
@@ -31,9 +32,9 @@ class TestElectricityDemandConstants:
     def test_electricity_demand_ofh_default(self) -> None:
         """Test OFH electricity demand default for >6 units."""
         # Should return the value for 6 units for any value > 6
-        assert ELECTRICITY_DEMAND["OFH"][6] == 1350
-        assert ELECTRICITY_DEMAND["OFH"][10] == 1350
-        assert ELECTRICITY_DEMAND["OFH"][100] == 1350
+        assert ELECTRICITY_DEMAND[HouseType.OFH][6] == 1350
+        assert ELECTRICITY_DEMAND[HouseType.OFH][10] == 1350
+        assert ELECTRICITY_DEMAND[HouseType.OFH][100] == 1350
 
 
 class TestWaterDemand:
@@ -41,11 +42,11 @@ class TestWaterDemand:
 
     def test_ofh_water_demand(self) -> None:
         """Test OFH water demand."""
-        assert WATER_DEMAND["OFH"] == 500
+        assert WATER_DEMAND[HouseType.OFH] == 500
 
     def test_mfh_water_demand(self) -> None:
         """Test MFH water demand."""
-        assert WATER_DEMAND["MFH"] == 1000
+        assert WATER_DEMAND[HouseType.MFH] == 1000
 
 
 class TestInsulationStandards:
@@ -112,12 +113,12 @@ class TestPowerConversionFactors:
     def test_ofh_conversion_factor(self) -> None:
         """Test OFH power conversion factor."""
         # OFH: x W = y kWh * 60 min/h * 60 s/min / 2 s * 1000 W/kW
-        assert POWER_CONVERSION_FACTORS["OFH"] == 1_800_000
+        assert POWER_CONVERSION_FACTORS[HouseType.OFH] == 1_800_000
 
     def test_mfh_conversion_factor(self) -> None:
         """Test MFH power conversion factor."""
         # MFH: x W = y kWh * 60 min/h / 15 min * 1000 W/kW
-        assert POWER_CONVERSION_FACTORS["MFH"] == 4_000
+        assert POWER_CONVERSION_FACTORS[HouseType.MFH] == 4_000
 
 
 class TestPowerFactors:

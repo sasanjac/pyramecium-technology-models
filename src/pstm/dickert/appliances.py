@@ -43,28 +43,32 @@ class Constants:
     WEEKENDDAYS_PER_YEAR: int = 104
 
 
-def validate_pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG001
-    if not -1 <= value <= 1:
-        msg = f"Attribute {attribute.name} has to be between -1 and 1, is {value}"
-        raise ValueError(msg)
+class Validators:
+    """attrs validators of the appliance levels; attrs reports an invalid field only by raising."""
 
-    return value
+    @staticmethod
+    def pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG004
+        if not -1 <= value <= 1:
+            msg = f"Attribute {attribute.name} has to be between -1 and 1, is {value}"
+            raise ValueError(msg)
 
+        return value
 
-def validate_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG001
-    if not 0 <= value <= 1:
-        msg = f"Attribute {attribute.name} has to be between 0 and 1, is {value}"
-        raise ValueError(msg)
+    @staticmethod
+    def level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG004
+        if not 0 <= value <= 1:
+            msg = f"Attribute {attribute.name} has to be between 0 and 1, is {value}"
+            raise ValueError(msg)
 
-    return value
+        return value
 
-
-def validate_level_sequence(
-    instance: Appliances,
-    attribute: attrs.Attribute,
-    value: Sequence[float],
-) -> Sequence[float]:
-    return tuple(validate_level(instance, attribute, level) for level in value)
+    @staticmethod
+    def level_sequence(
+        instance: Appliances,
+        attribute: attrs.Attribute,
+        value: Sequence[float],
+    ) -> Sequence[float]:
+        return tuple(Validators.level(instance, attribute, level) for level in value)
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -73,16 +77,16 @@ class Appliances(Constructible):
     phase: Phase
     switch_on_current: float
     switch_on_time: int
-    equipment_level: float = attrs.field(validator=validate_level)
+    equipment_level: float = attrs.field(validator=Validators.level)
     active_power_distribution_type: DistributionType
     active_power_parameter_1: float
     active_power_parameter_2: float
     active_power_parameter_3: float
-    reactive_power_share: float = attrs.field(validator=validate_level)
+    reactive_power_share: float = attrs.field(validator=Validators.level)
     reactive_power_distribution_type: DistributionType
-    reactive_power_parameter_1: float = attrs.field(validator=validate_level)
-    reactive_power_parameter_2: float = attrs.field(validator=validate_level)
-    reactive_power_parameter_3: float = attrs.field(validator=validate_level)
+    reactive_power_parameter_1: float = attrs.field(validator=Validators.level)
+    reactive_power_parameter_2: float = attrs.field(validator=Validators.level)
+    reactive_power_parameter_3: float = attrs.field(validator=Validators.level)
 
     @staticmethod
     def _sim_distribution(

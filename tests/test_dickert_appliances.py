@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import typing as t
 import zoneinfo as zi
 
 import attrs
@@ -11,7 +12,7 @@ import numpy as np
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import DistributionType
 
-PARAMS = {
+PARAMS: dict[str, t.Any] = {
     "description": "test",
     "phase": 1,
     "switch_on_current": 0.0,
@@ -27,7 +28,7 @@ PARAMS = {
     "reactive_power_parameter_2": 0.0,
     "reactive_power_parameter_3": 0.0,
 }
-RUN = {
+RUN: dict[str, t.Any] = {
     "n_units": 2,
     "n_steps": 3,
     "generator": np.random.default_rng(0),

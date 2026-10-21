@@ -42,12 +42,12 @@
     homepage = "https://github.com/sasanjac/pyramecium-technology-models"
 
   [project.scripts]
-    convert-clc-europe-file   = "pstm.cli.convert_clc_europe_file:convert"
-    convert-dwd-try-files     = "pstm.cli.convert_dwd_try_files:convert"
-    convert-time-zones-file   = "pstm.cli.convert_time_zones_file:convert"
-    convert-zip-codes-file    = "pstm.cli.convert_zip_codes_file:convert"
-    create-dickert-households = "pstm.cli.create_dickert_households:create"
-    create-dwd-try-index-file = "pstm.cli.create_dwd_try_index_file:create"
+    convert-clc-europe-file   = "pstm.cli.convert_clc_europe_file:ClcEuropeFile.convert"
+    convert-dwd-try-files     = "pstm.cli.convert_dwd_try_files:DwdTryFiles.convert"
+    convert-time-zones-file   = "pstm.cli.convert_time_zones_file:TimeZonesFile.convert"
+    convert-zip-codes-file    = "pstm.cli.convert_zip_codes_file:ZipCodesFile.convert"
+    create-dickert-households = "pstm.cli.create_dickert_households:DickertHouseholds.create"
+    create-dwd-try-index-file = "pstm.cli.create_dwd_try_index_file:DwdTryIndexFile.create"
 
 [build-system]
   build-backend = "hatchling.build"

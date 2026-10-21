@@ -18,8 +18,8 @@ from pyochain import Some
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
-from pstm.dickert.appliances import validate_level_sequence
-from pstm.utils import dates
+from pstm.dickert.appliances import Validators
+from pstm.utils.dates import Dates
 
 NaT = dt.time(0)
 
@@ -69,7 +69,7 @@ class LightingProfiles(Appliances):
         dt.time,
     ]
     time_on_variations: tuple[float, float, float, float] = attrs.field(
-        validator=validate_level_sequence,
+        validator=Validators.level_sequence,
     )
 
     def _run(
@@ -90,7 +90,7 @@ class LightingProfiles(Appliances):
             tz=str(tz),
             altitude=altitude,
         )
-        times = dates.date_range(tz=tz, freq=dt.timedelta(days=1), year=year)
+        times = Dates.date_range(tz=tz, freq=dt.timedelta(days=1), year=year)
         s = location.get_sun_rise_set_transit(times, method="spa")
         sunrise = s.sunrise.apply(lambda x: x.hour * 60 + x.minute).to_numpy()
         sunset = s.sunset.apply(lambda x: x.hour * 60 + x.minute).to_numpy()

@@ -13,17 +13,20 @@ from pstm.base import HeatingType
 from pstm.base import Tech
 from pstm.storage import Storage
 from pstm.storage import StorageType
-from pstm.utils.dates import date_range
+from pstm.utils.dates import Dates
 
 TZ = zi.ZoneInfo("Europe/Berlin")
 
 
-@pytest.fixture
-def dates() -> pd.DatetimeIndex:
-    return date_range(tz=TZ, year=2024)[:96]
+class TechCase:
+    """Fixtures shared by the test classes of this module."""
+
+    @pytest.fixture
+    def dates(self) -> pd.DatetimeIndex:
+        return Dates.date_range(tz=TZ, year=2024)[:96]
 
 
-class TestHeat:
+class TestHeat(TechCase):
     @pytest.mark.parametrize(
         ("heating_type", "frame"),
         [(HeatingType.ROOM, "thr"), (HeatingType.PROCESS_LOW, "thl"), (HeatingType.PROCESS_HIGH, "thh")],
@@ -38,7 +41,7 @@ class TestHeat:
         assert tech.heat(heating_type) is getattr(tech, frame)
 
 
-class TestResample:
+class TestResample(TechCase):
     def test_downsampling_onto_dates(self, dates: pd.DatetimeIndex) -> None:
         index = pd.date_range(dates[0], periods=4 * len(dates), freq="15min")
         target = pd.Series(np.repeat(np.arange(len(dates), dtype=np.float64), 4), index=index)
@@ -54,7 +57,7 @@ class TestResample:
         assert "frequency of the index is not defined" in str(error)
 
 
-class TestCreate:
+class TestCreate(TechCase):
     def test_create_converts_the_name_of_a_storage_type(self, dates: pd.DatetimeIndex) -> None:
         storage = Storage.create(
             dates=dates,
