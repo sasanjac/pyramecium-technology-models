@@ -4,9 +4,19 @@ A toolbox to create multi-energy power time series for different technologies in
 
 ## Installation
 
-Installation is fairly easy:
 ```sh
 pip install pyramecium-technology-models
+```
+
+The core installs the technology models. Extras add the access to geo and weather data:
+
+- `geo`: geo references (`pstm.utils.geo.GeoRef`) for climate zones, time zones, altitudes and land cover
+- `weather`: DWD test reference years and NEWA wind data (`pstm.utils.weather`)
+- `mastr`: queries of the Marktstammdatenregister (`pstm.mastr`)
+- `all`: all extras
+
+```sh
+pip install "pyramecium-technology-models[geo,weather]"
 ```
 
 ## CRS

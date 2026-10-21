@@ -24,7 +24,6 @@ from pstm.dickert.lighting_profiles import LightingProfiles
 from pstm.dickert.on_off_profiles import OnOffProfiles
 from pstm.dickert.process_profiles import ProcessProfiles
 from pstm.utils import dates
-from pstm.utils import geo
 
 if t.TYPE_CHECKING:
     import pathlib
@@ -208,6 +207,8 @@ class Households:
         generator: np.random.Generator,
         baseline_only: bool = False,
     ) -> None:
+        from pstm.utils import geo  # noqa: PLC0415 - optional extra geo
+
         with geo.GeoRef(use_clc=False) as georef:
             self.tz = georef.get_time_zone(lat=lat, lon=lon)
 

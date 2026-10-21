@@ -6,8 +6,15 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import open_mastr
 import pandas as pd
+
+from pstm.utils.exceptions import MissingExtraError
+
+try:
+    import open_mastr
+except ModuleNotFoundError as e:
+    extra = "mastr"
+    raise MissingExtraError(extra) from e
 
 if TYPE_CHECKING:
     from pstm.utils.geo import GeoRef

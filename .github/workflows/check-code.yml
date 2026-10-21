@@ -23,7 +23,7 @@
             enable-cache: true
 
         - name: Install the project
-          run: uv sync --dev
+          run: uv sync --dev --all-extras
 
         - name: Check code
           run: uv run ruff check .

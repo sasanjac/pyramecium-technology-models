@@ -16,7 +16,6 @@ import pandas as pd
 from pstm.base import Tech
 from pstm.utils import dates
 from pstm.utils import exceptions
-from pstm.utils.geo import GeoRef
 
 if t.TYPE_CHECKING:
     import numpy.typing as npt
@@ -116,6 +115,8 @@ class Household(Tech):
         self.freq = FREQS[self.house_type]
         if self.climate_zone is None:
             if self.lat is not None and self.lon is not None:
+                from pstm.utils.geo import GeoRef  # noqa: PLC0415 - optional extra geo
+
                 with GeoRef(use_clc=False) as georef:
                     self.climate_zone = georef.get_dwd_try_zone(self.lat, self.lon)
             else:
@@ -124,6 +125,8 @@ class Household(Tech):
 
         if self.tz is None:
             if self.lat is not None and self.lon is not None:
+                from pstm.utils.geo import GeoRef  # noqa: PLC0415 - optional extra geo
+
                 with GeoRef(use_clc=False) as georef:
                     self.tz = georef.get_time_zone(lat=self.lat, lon=self.lon)
             else:

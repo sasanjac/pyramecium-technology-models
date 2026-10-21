@@ -12,15 +12,21 @@ import zoneinfo as zi
 from dataclasses import dataclass
 from dataclasses import field
 
-import aiohttp
-import netCDF4
 import numpy as np
 import pandas as pd
-import pyproj
-import requests
 from loguru import logger
 
 from pstm.utils import dates
+from pstm.utils.exceptions import MissingExtraError
+
+try:
+    import aiohttp
+    import netCDF4
+    import pyproj
+    import requests
+except ModuleNotFoundError as e:
+    extra = "weather"
+    raise MissingExtraError(extra) from e
 
 if t.TYPE_CHECKING:
     from pstm.utils.geo import GeoRef

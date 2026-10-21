@@ -7,18 +7,24 @@ import random
 import typing as t
 import zoneinfo as zi
 
-import aiohttp
 import attrs
-import geopandas as gpd
 import numpy as np
-import pyproj
-import rasterio as rio
-import shapely.geometry as shg
 from loguru import logger
-from scipy.spatial import distance
 
+from pstm.utils.exceptions import MissingExtraError
 from pstm.utils.roughness_lengths import ROUGHNESS_LENGTHS
 from pstm.utils.roughness_lengths import ValidCLCs
+
+try:
+    import aiohttp
+    import geopandas as gpd
+    import pyproj
+    import rasterio as rio
+    import shapely.geometry as shg
+    from scipy.spatial import distance
+except ModuleNotFoundError as e:
+    extra = "geo"
+    raise MissingExtraError(extra) from e
 
 if t.TYPE_CHECKING:
     import collections.abc as cabc
