@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from pyochain import Iter
+from pyochain import Null
+from pyochain import Some
 
 from pstm.utils.exceptions import MissingExtraError
 
@@ -55,14 +58,15 @@ class MaStR:
 
     def installed_wind_farms(self, lat: float, lon: float, power_installed: float) -> list[WindFarm]:
         voronois = self.georef.get_voronois(lat=lat, lon=lon)
-        installed_units = None
-        for voronoi in voronois:
-            installed_units = self.units_wind[self.units_wind["voronoi"] == voronoi]
-            if not installed_units.empty:
-                break
-
-        if installed_units is None or installed_units.empty:
-            return []
+        match (
+            Iter[int](voronois)
+            .map(lambda voronoi: self.units_wind[self.units_wind["voronoi"] == voronoi])
+            .find(lambda units: not units.empty)
+        ):
+            case Some(installed_units):
+                pass
+            case Null():
+                return []
 
         power_installed_current = installed_units.Nettonennleistung.sum() * 1e3  # kW in W
         unit_factor = math.ceil(power_installed * 1e6 / power_installed_current)

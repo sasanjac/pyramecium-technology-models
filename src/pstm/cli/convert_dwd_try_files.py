@@ -1,16 +1,19 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
 import datetime as dt
 import pathlib
 import zoneinfo as zi
-from typing import Literal
 
 import click
 from loguru import logger
+from pyochain import Err
+from pyochain import Ok
+from pyochain import Some
 
 from pstm.utils.dates import date_range
+from pstm.utils.geo import DwdTryScenario
 from pstm.utils.geo import GeoRef
 from pstm.utils.weather import WeatherGenerator
 
@@ -36,6 +39,8 @@ from pstm.utils.weather import WeatherGenerator
 )
 @click.option(
     "--scenario",
+    type=click.Choice([scenario.value for scenario in DwdTryScenario]),
+    callback=lambda _ctx, _param, value: DwdTryScenario(value),
     help="DWD TRY scenario.",
 )
 @click.option(
@@ -49,7 +54,7 @@ def convert(
     input_path: pathlib.Path,
     output_path: pathlib.Path,
     year: int,
-    scenario: Literal["mittel", "sommerwarm", "winterkalt"],
+    scenario: DwdTryScenario,
     skiprows: int,
     delete: bool = False,
 ) -> None:
@@ -71,7 +76,13 @@ def convert(
                 coord = file_path.stem.split("_")[1]
                 lat = int(coord[len(coord) // 2 :])
                 lon = int(coord[: len(coord) // 2])
-                index = georef.get_weather_gen_index(lat=lat, lon=lon)
+                match georef.get_weather_gen_index(lat=lat, lon=lon):
+                    case Ok(index):
+                        pass
+                    case Err(error):
+                        logger.error("{error}", error=error)
+                        return
+
                 output_file = output_path / str(year) / scenario / file_name_template.format(index)
                 if output_file.exists():
                     continue
@@ -83,8 +94,8 @@ def convert(
                     lat=lat,
                     lon=lon,
                     year=year,
-                    tz=tz,
-                    index=date_index,
+                    tz=Some(tz),
+                    index=Some(date_index),
                     freq=dt.timedelta(hours=1),
                     skiprows=skiprows,
                 )

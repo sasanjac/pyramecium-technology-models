@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -15,6 +15,12 @@ from dataclasses import field
 import numpy as np
 import pandas as pd
 from loguru import logger
+from pyochain import NONE
+from pyochain import Err
+from pyochain import Null
+from pyochain import Ok
+from pyochain import Option
+from pyochain import Some
 
 from pstm.utils import dates
 from pstm.utils.exceptions import MissingExtraError
@@ -29,6 +35,8 @@ except ModuleNotFoundError as e:
     raise MissingExtraError(extra) from e
 
 if t.TYPE_CHECKING:
+    from pyochain import Result
+
     from pstm.utils.geo import GeoRef
 
     type Array1DF = np.ndarray[tuple[int], np.dtype[np.float64]]
@@ -119,9 +127,9 @@ class WeatherGenerator:
         georef: GeoRef,
         lat: float,
         lon: float,
-        alt: float | None = None,
-        tz: dt.tzinfo | None = None,
-        index: pd.DatetimeIndex | None = None,
+        alt: Option[float] = NONE,
+        tz: Option[dt.tzinfo] = NONE,
+        index: Option[pd.DatetimeIndex] = NONE,
         freq: dt.timedelta = dt.timedelta(hours=1),
         year: int = 2050,
         skiprows: int = 32,
@@ -129,18 +137,11 @@ class WeatherGenerator:
         weather = pd.read_csv(dwd_file_path, skiprows=skiprows, sep=r"\s+")
         weather = weather.drop(0, axis=0)
         weather = weather.dropna()
-        if tz is None:
-            tz = georef.get_time_zone(lat=lat, lon=lon)
-
-        if alt is None:
-            alt = georef.get_altitude(lat=lat, lon=lon)
-
-        if index is None:
-            index = dates.date_range(tz, freq=freq, year=year)
-
-        weather.index = index
+        tz_ = tz.unwrap_or_else(lambda: georef.get_time_zone(lat=lat, lon=lon))
+        alt_ = alt.unwrap_or_else(lambda: georef.get_altitude(lat=lat, lon=lon))
+        weather.index = index.unwrap_or_else(lambda: dates.date_range(tz_, freq=freq, year=year))
         if freq != dt.timedelta(hours=1):
-            new_index = dates.date_range(tz, freq, year=year)
+            new_index = dates.date_range(tz_, freq, year=year)
             # resample().mean() leaves the newly created sub-hourly bins as NaN; reindex(method="ffill")
             # cannot fill them because the labels already exist, so forward-fill the values explicitly.
             weather = weather.resample(freq).mean().reindex(new_index).ffill()
@@ -149,8 +150,8 @@ class WeatherGenerator:
         return WeatherGenerator(
             lat=lat,
             lon=lon,
-            alt=alt,
-            tz=tz,
+            alt=alt_,
+            tz=tz_,
             ghi=weather["B"] + weather["D"],
             dhi=weather["D"],
             temp_air=weather["t"] + 273.15,
@@ -481,17 +482,29 @@ class NEWA:
         lon: float,
         year: int,
         tz: dt.tzinfo,
-    ) -> NEWA:
+    ) -> Result[NEWA, requests.HTTPError | ValueError]:
+        """NEWA series of a site, downloaded from the API.
+
+        Returns:
+            ``Err`` with the HTTP error of the request, or with the error of :meth:`from_nc`.
+        """
         url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
         response = requests.get(url, timeout=600, stream=True)
-        response.raise_for_status()
+        if not response.ok:
+            msg = f"{response.status_code} {response.reason} for url: {url}"
+            return Err(requests.HTTPError(msg, response=response))
+
         with tempfile.NamedTemporaryFile(suffix=".nc", delete_on_close=False) as buf:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 if chunk:
                     buf.write(chunk)
 
             buf.flush()
-            return cls.from_nc(file_path=buf.name, tz=tz)
+            match cls.from_nc(file_path=buf.name, tz=tz):
+                case Ok(newa):
+                    return Ok(newa)
+                case Err(error):
+                    return Err(error)
 
     @classmethod
     async def from_api_async(
@@ -500,30 +513,41 @@ class NEWA:
         lon: float,
         year: int,
         tz: dt.tzinfo,
-    ) -> NEWA:
+    ) -> Result[NEWA, ValueError]:
+        """NEWA series of a site from the feather cache, downloaded on a miss.
+
+        A download that times out is repeated after one second.
+
+        Returns:
+            ``Err`` with the error of :meth:`download_and_convert`.
+        """
         lat = round(lat, 3)
         lon = round(lon, 3)
         file_path = NEWA_BASE_PATH / NEWA_BASE_FEATHER_FILE_NAME.format(lat=lat, lon=lon, year=year)
-        try:
-            return cls.from_feather(file_path=file_path)
-        except FileNotFoundError:
-            logger.trace("Downloading NEWA data for lat={lat}, lon={lon}, year={year}", lat=lat, lon=lon, year=year)
-            url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
-            while True:
-                try:
-                    return await cls.download_and_convert(url=url, file_path=file_path, tz=tz)
-                except TimeoutError:
-                    await asyncio.sleep(1)
+        if file_path.exists():
+            return Ok(cls.from_feather(file_path=file_path))
+
+        logger.trace("Downloading NEWA data for lat={lat}, lon={lon}, year={year}", lat=lat, lon=lon, year=year)
+        url = NEWA_BASE_URL.format(lat=lat, lon=lon, year=year, year2=int(year) + 1)
+        while True:
+            try:
+                return await cls.download_and_convert(url=url, file_path=file_path, tz=tz)
+            except TimeoutError:  # raised by aiohttp
+                await asyncio.sleep(1)
 
     @classmethod
-    async def download_and_convert(cls, url: str, file_path: pathlib.Path, tz: dt.tzinfo) -> NEWA:
+    async def download_and_convert(cls, url: str, file_path: pathlib.Path, tz: dt.tzinfo) -> Result[NEWA, ValueError]:
+        """Download a NEWA point file, convert it and write it to ``file_path``.
+
+        Returns:
+            ``Err`` if the API does not answer with status 200, or with the error of :meth:`from_nc`.
+        """
         async with (
             aiohttp.ClientSession() as session,
             session.get(url, timeout=aiohttp.ClientTimeout(600)) as response,
         ):
             if response.status != DOWNLOAD_OK:
-                msg = f"Error: {response.status}"
-                raise ValueError(msg) from None
+                return Err(ValueError(f"Error: {response.status}"))
 
             with tempfile.NamedTemporaryFile(delete_on_close=False) as buf:
                 async for chunk in response.content.iter_chunked(CHUNK_SIZE):
@@ -532,12 +556,10 @@ class NEWA:
 
                 buf.flush()
                 logger.trace("Converting NEWA data to feather format")
-                data = cls.from_nc(file_path=buf.name, tz=tz)
-                data.to_feather(file_path=file_path)
-                return data
+                return cls.from_nc(file_path=buf.name, tz=tz).inspect(lambda data: data.to_feather(file_path=file_path))
 
     @classmethod
-    def from_nc(cls, file_path: pathlib.Path | str, tz: dt.tzinfo) -> NEWA:
+    def from_nc(cls, file_path: pathlib.Path | str, tz: dt.tzinfo) -> Result[NEWA, ValueError]:
         """Read a NEWA mesoscale time-series point file.
 
         The ``time`` variable counts minutes in UTC, so the index is built from
@@ -545,13 +567,16 @@ class NEWA:
         ``dt_stop``, which belongs to the next year, and the files written in
         2024 end one step before it.  Every step at or after
         ``temporalExtentMaximum`` is dropped, so both give the same index.
+
+        Returns:
+            ``Err`` if the file holds other heights than :data:`NEWA_HEIGHTS`.
         """
         data = netCDF4.Dataset(file_path, mode="r")
         heights = [float(h) for h in np.asarray(data.variables["height"][:])]
         if heights != list(NEWA_HEIGHTS):
             data.close()
             msg = f"NEWA file {file_path} holds the heights {heights}, expected {list(NEWA_HEIGHTS)}."
-            raise ValueError(msg)
+            return Err(ValueError(msg))
 
         time = data.variables["time"]
         stamps = np.asarray(netCDF4.num2date(time[:], units=time.units, only_use_cftime_datetimes=False), dtype=object)
@@ -560,38 +585,42 @@ class NEWA:
         keep = np.asarray(index_utc < stop)
         index = t.cast("pd.DatetimeIndex", index_utc[keep].tz_convert(tz))
 
-        def var(name: str, level: int | None = None) -> Array1DF:
-            values = data.variables[name][:] if level is None else data.variables[name][:, level]
+        def var(name: str, level: Option[int] = NONE) -> Array1DF:
+            match level:
+                case Some(level_):
+                    values = data.variables[name][:, level_]
+                case Null():
+                    values = data.variables[name][:]
             return t.cast("Array1DF", np.asarray(values, dtype=np.float64)[keep])
 
         newa = cls(
             index=index,
             roughness_length=var("ZNT"),
-            wind_speed_50=var("WS", 0),
-            wind_speed_75=var("WS", 1),
-            wind_speed_100=var("WS", 2),
-            wind_speed_150=var("WS", 3),
-            wind_speed_200=var("WS", 4),
-            wind_speed_250=var("WS", 5),
-            wind_speed_500=var("WS", 6),
-            wind_power_density_50=var("PD", 0),
-            wind_power_density_75=var("PD", 1),
-            wind_power_density_100=var("PD", 2),
-            wind_power_density_150=var("PD", 3),
-            wind_power_density_200=var("PD", 4),
-            wind_power_density_250=var("PD", 5),
-            wind_power_density_500=var("PD", 6),
+            wind_speed_50=var("WS", Some(0)),
+            wind_speed_75=var("WS", Some(1)),
+            wind_speed_100=var("WS", Some(2)),
+            wind_speed_150=var("WS", Some(3)),
+            wind_speed_200=var("WS", Some(4)),
+            wind_speed_250=var("WS", Some(5)),
+            wind_speed_500=var("WS", Some(6)),
+            wind_power_density_50=var("PD", Some(0)),
+            wind_power_density_75=var("PD", Some(1)),
+            wind_power_density_100=var("PD", Some(2)),
+            wind_power_density_150=var("PD", Some(3)),
+            wind_power_density_200=var("PD", Some(4)),
+            wind_power_density_250=var("PD", Some(5)),
+            wind_power_density_500=var("PD", Some(6)),
             temperature_2=var("T2"),
-            temperature_50=var("T", 0),
-            temperature_75=var("T", 1),
-            temperature_100=var("T", 2),
-            temperature_150=var("T", 3),
-            temperature_200=var("T", 4),
-            temperature_250=var("T", 5),
-            temperature_500=var("T", 6),
+            temperature_50=var("T", Some(0)),
+            temperature_75=var("T", Some(1)),
+            temperature_100=var("T", Some(2)),
+            temperature_150=var("T", Some(3)),
+            temperature_200=var("T", Some(4)),
+            temperature_250=var("T", Some(5)),
+            temperature_500=var("T", Some(6)),
         )
         data.close()
-        return newa
+        return Ok(newa)
 
     @staticmethod
     def pressure(

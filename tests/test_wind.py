@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 """Unit tests for Wind technology model."""
 
 from __future__ import annotations
@@ -8,6 +8,7 @@ import zoneinfo as zi
 import numpy as np
 import pandas as pd
 import pytest
+from pyochain import Some
 
 from pstm.utils.dates import date_range
 from pstm.wind import MODELCHAIN_DATA
@@ -30,40 +31,40 @@ class TestWindCreation:
         wind = Wind(
             dates=dates,
             hub_height=135,
-            turbine_type="E-126/4200",
+            turbine_type=Some("E-126/4200"),
             lat=53.5,
             lon=9.5,
         )
         assert wind.hub_height == 135
-        assert wind.turbine_type == "E-126/4200"
+        assert wind.turbine_type == Some("E-126/4200")
 
     def test_wind_creation_with_power_inst(self, dates: pd.DatetimeIndex) -> None:
         """Test Wind creation with power_inst."""
         wind = Wind(
             dates=dates,
             hub_height=100,
-            power_inst=3000000,  # 3 MW
+            power_inst=Some(3000000),  # 3 MW
             lat=53.5,
             lon=9.5,
         )
-        assert wind.power_inst == 3000000
+        assert wind.power_inst == Some(3000000)
 
     def test_wind_creation_missing_arguments(self, dates: pd.DatetimeIndex) -> None:
         """Test Wind creation fails without turbine type or power_inst."""
+        wind = Wind.create(dates=dates, hub_height=100, lat=53.5, lon=9.5)
+        assert isinstance(wind.unwrap_err(), MissingArgumentsError)
+
+    def test_wind_creation_missing_arguments_raises_in_init(self, dates: pd.DatetimeIndex) -> None:
+        """Direct construction raises the error that ``create`` returns."""
         with pytest.raises(MissingArgumentsError):
-            Wind(
-                dates=dates,
-                hub_height=100,
-                lat=53.5,
-                lon=9.5,
-            )
+            Wind(dates=dates, hub_height=100, lat=53.5, lon=9.5)
 
     def test_wind_default_cosphi(self, dates: pd.DatetimeIndex) -> None:
         """Test default cosphi value."""
         wind = Wind(
             dates=dates,
             hub_height=100,
-            power_inst=2000000,
+            power_inst=Some(2000000),
             lat=53.5,
             lon=9.5,
         )
@@ -112,11 +113,11 @@ class TestWindRun:
         wind = Wind(
             dates=dates,
             hub_height=100,
-            power_inst=2000000,
+            power_inst=Some(2000000),
             lat=53.5,
             lon=9.5,
         )
-        wind.run(weather)
+        wind.run(weather).unwrap()
 
         # Wind output should be non-zero (negative for generation)
         assert np.any(wind.acp["low"]["L1"].to_numpy() != 0)
@@ -127,11 +128,11 @@ class TestWindRun:
         wind = Wind(
             dates=dates,
             hub_height=100,
-            power_inst=power_inst,
+            power_inst=Some(power_inst),
             lat=53.5,
             lon=9.5,
         )
-        wind.run(weather)
+        wind.run(weather).unwrap()
 
         # Output (negative) should not exceed rated power
         assert np.all(wind.acp["low"]["L1"].to_numpy() >= -power_inst * 1.1)  # 10% margin
@@ -141,12 +142,12 @@ class TestWindRun:
         wind = Wind(
             dates=dates,
             hub_height=100,
-            power_inst=2000000,
+            power_inst=Some(2000000),
             lat=53.5,
             lon=9.5,
             cosphi=0.9,
         )
-        wind.run(weather)
+        wind.run(weather).unwrap()
 
         # Reactive power should be calculated
         assert np.any(wind.acq["low"]["L1"].to_numpy() != 0)
@@ -199,7 +200,7 @@ class TestWindSiteIndependence:
         wind_coastal = Wind(
             dates=dates,
             hub_height=100,
-            power_inst=2000000,
+            power_inst=Some(2000000),
             lat=53.86,
             lon=9.5,
         )
@@ -208,14 +209,14 @@ class TestWindSiteIndependence:
         wind_inland = Wind(
             dates=dates,
             hub_height=100,
-            power_inst=2000000,
+            power_inst=Some(2000000),
             lat=48.0,
             lon=11.5,
         )
 
         # Both should produce output without errors
-        wind_coastal.run(weather)
-        wind_inland.run(weather)
+        wind_coastal.run(weather).unwrap()
+        wind_inland.run(weather).unwrap()
 
         coastal_generation = wind_coastal.acp["low"]["L1"].sum()
         inland_generation = wind_inland.acp["low"]["L1"].sum()
@@ -227,13 +228,13 @@ class TestWindModelChainData:
     """The model chain of a turbine follows its ``modelchain_data``."""
 
     def test_default_is_the_hellman_chain(self) -> None:
-        wind = Wind(dates=date_range(tz=TZ, year=2023)[:4], hub_height=100, power_inst=2e6, lat=54.8, lon=13.8)
+        wind = Wind(dates=date_range(tz=TZ, year=2023)[:4], hub_height=100, power_inst=Some(2e6), lat=54.8, lon=13.8)
         assert wind.mc.wind_speed_model == "hellman"
 
     def test_a_multi_height_chain_interpolates_between_levels(self) -> None:
         dates = date_range(tz=TZ, year=2023)[:4]
         data = {**MODELCHAIN_DATA, "wind_speed_model": "log_interpolation_extrapolation"}
-        wind = Wind(dates=dates, hub_height=100, power_inst=2e6, lat=54.8, lon=13.8, modelchain_data=data)
+        wind = Wind(dates=dates, hub_height=100, power_inst=Some(2e6), lat=54.8, lon=13.8, modelchain_data=data)
         assert wind.mc.wind_speed_model == "log_interpolation_extrapolation"
         columns = pd.MultiIndex.from_tuples(
             [("wind_speed", 75), ("wind_speed", 150), ("temperature", 75), ("pressure", 75), ("roughness_length", 0)],

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 """Unit tests for PV technology model."""
 
 from __future__ import annotations
@@ -135,7 +135,7 @@ class TestPVRun:
             lon=13.73,
             alt=100,
         )
-        pv.run(weather)
+        pv.run(weather).unwrap()
 
         # PV output should be negative (generation convention)
         # At least some values should be non-zero during sunny hours
@@ -152,7 +152,7 @@ class TestPVRun:
             lon=13.73,
             alt=100,
         )
-        pv.run(weather)
+        pv.run(weather).unwrap()
 
         # Output should not exceed rated power (negative values for generation)
         assert np.all(pv.acp["low"]["L1"].to_numpy() >= -power_inst)

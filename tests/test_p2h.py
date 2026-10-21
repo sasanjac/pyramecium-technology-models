@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 """Unit tests for Power2Heat technology model."""
 
 from __future__ import annotations
@@ -161,11 +161,6 @@ class TestPower2HeatInvalidInputs:
         return date_range(tz=TZ, year=2024)[:96]
 
     def test_invalid_heating_type(self, dates) -> None:
-        """Test invalid heating type raises error."""
-        with pytest.raises(ValueError, match="heating type 'invalid'"):
-            Power2Heat(
-                dates=dates,
-                power_inst=10000,
-                efficiency=0.95,
-                heating_type="invalid",  # type: ignore[arg-type]
-            )
+        """Test invalid heating type is an error."""
+        p2h = Power2Heat.create(dates=dates, power_inst=10000, efficiency=0.95, heating_type="invalid")
+        assert "is not a valid HeatingType" in str(p2h.unwrap_err())

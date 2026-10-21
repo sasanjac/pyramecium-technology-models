@@ -1,8 +1,9 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
 import datetime as dt
+import enum
 import json
 import pathlib
 import random
@@ -12,13 +13,18 @@ from collections import defaultdict
 import attrs
 import numpy as np
 import pandas as pd
+from pyochain import NONE
+from pyochain import Null
+from pyochain import Ok
+from pyochain import Option
+from pyochain import Some
 
 from pstm.base import Tech
 from pstm.utils import dates
-from pstm.utils import exceptions
 
 if t.TYPE_CHECKING:
     import numpy.typing as npt
+    from pyochain import Result
 
     JSONTypes = bool | str | float | list["JSONTypes"] | dict[str, "JSONTypes"] | None
 
@@ -31,6 +37,17 @@ if t.TYPE_CHECKING:
 
 SRC_PATH = pathlib.Path(__file__).parent.parent.parent
 
+
+class HouseType(enum.StrEnum):
+    MFH = "MFH"
+    OFH = "OFH"
+
+
+class BuildingType(enum.StrEnum):
+    EH = "EH"
+    LEH = "LEH"
+
+
 ELECTRICITY_DEMAND_OFH = {
     1: 2350,
     2: 2020,
@@ -42,14 +59,14 @@ ELECTRICITY_DEMAND_OFH = {
 
 ELECTRICITY_DEMAND_MFH = 3000
 
-ELECTRICITY_DEMAND: dict[str, dict[int, float]] = {
-    "OFH": defaultdict(lambda: ELECTRICITY_DEMAND_OFH[6], ELECTRICITY_DEMAND_OFH),
-    "MFH": defaultdict(lambda: ELECTRICITY_DEMAND_MFH),
+ELECTRICITY_DEMAND: dict[HouseType, dict[int, float]] = {
+    HouseType.OFH: defaultdict(lambda: ELECTRICITY_DEMAND_OFH[6], ELECTRICITY_DEMAND_OFH),
+    HouseType.MFH: defaultdict(lambda: ELECTRICITY_DEMAND_MFH),
 }
 
 WATER_DEMAND = {
-    "OFH": 500,
-    "MFH": 1000,
+    HouseType.OFH: 500,
+    HouseType.MFH: 1000,
 }
 
 INSULATION_STANDARDS = {
@@ -76,16 +93,13 @@ def load_json_from_file(path: pathlib.Path) -> JSONTypes:
         return t.cast("JSONTypes", json.load(f))
 
 
-HOUSE_TYPES = t.Literal["MFH", "OFH"]
-BUILDING_TYPES = t.Literal["EH", "LEH"]
-
 DATA_PATH = SRC_PATH / "data/household/vdi4655"
 
 POWER_CONVERSION_FACTORS = {
-    "OFH": 1_800_000,
-    "MFH": 4_000,
+    HouseType.OFH: 1_800_000,
+    HouseType.MFH: 4_000,
 }  # OFH: x W = y kWh * 60 min/h * 60 s/min / 2 s * 1000 W/kW; MFH: x W = y kWh * 60 min/h / 15 min * 1000 W/kW
-FREQS = {"OFH": 2, "MFH": 900}  # OFH: = 2 s; MFH: = 15 min = 900 s
+FREQS = {HouseType.OFH: 2, HouseType.MFH: 900}  # OFH: = 2 s; MFH: = 15 min = 900 s
 PROFILE_SHIFT_LENGTH = 7200  # 8 * 15 min * 60 s
 
 
@@ -96,15 +110,15 @@ class MissingArgumentsError(ValueError):
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class Household(Tech):
-    house_type: HOUSE_TYPES
-    building_type: BUILDING_TYPES
+    house_type: HouseType = attrs.field(converter=HouseType)
+    building_type: BuildingType = attrs.field(converter=BuildingType)
     n_units: int
     heat_demand: float
     area: float
     tz: dt.tzinfo
-    lat: float | None = None
-    lon: float | None = None
-    climate_zone: str | None = None
+    lat: Option[float] = NONE
+    lon: Option[float] = NONE
+    climate_zone: Option[str] = NONE
     data_path: pathlib.Path = DATA_PATH
 
     def __attrs_post_init__(self) -> None:
@@ -113,35 +127,30 @@ class Household(Tech):
         self.profiles = self.profiles_mapping[self.house_type][self.building_type]
         self.power_conversion_factor = POWER_CONVERSION_FACTORS[self.house_type]
         self.freq = FREQS[self.house_type]
-        if self.climate_zone is None:
-            if self.lat is not None and self.lon is not None:
+        match self.climate_zone, self.lat, self.lon:
+            case Some(zone), _, _:
+                pass
+            case Null(), Some(lat), Some(lon):
                 from pstm.utils.geo import GeoRef  # noqa: PLC0415 - optional extra geo
 
                 with GeoRef(use_clc=False) as georef:
-                    self.climate_zone = georef.get_dwd_try_zone(self.lat, self.lon)
-            else:
-                zone = "climate"
-                raise MissingArgumentsError(zone)
+                    zone = georef.get_dwd_try_zone(lat, lon)
+                self.climate_zone = Some(zone)
+            case _:
+                # attrs reports invalid arguments only by raising; ``create`` returns it as ``Err``.
+                zone_kind = "climate"
+                raise MissingArgumentsError(zone_kind)
 
-        if self.tz is None:
-            if self.lat is not None and self.lon is not None:
-                from pstm.utils.geo import GeoRef  # noqa: PLC0415 - optional extra geo
-
-                with GeoRef(use_clc=False) as georef:
-                    self.tz = georef.get_time_zone(lat=self.lat, lon=self.lon)
-            else:
-                zone = "time"
-                raise MissingArgumentsError(zone)
-
-        self.type_days = self.type_days_mapping[self.climate_zone]
+        self._zone = zone
+        self.type_days = self.type_days_mapping[zone]
 
     def _init_data(self) -> None:
         factors_mapping_paths = {
             house_type: {
                 building_type: self.data_path / f"factors_{house_type}_{building_type}.json"
-                for building_type in t.get_args(BUILDING_TYPES)
+                for building_type in BuildingType
             }
-            for house_type in t.get_args(HOUSE_TYPES)
+            for house_type in HouseType
         }
         self.factors_mapping = {
             house_type: {
@@ -149,17 +158,17 @@ class Household(Tech):
                     "FactorsMapping",
                     load_json_from_file(factors_mapping_paths[house_type][building_type]),
                 )
-                for building_type in t.get_args(BUILDING_TYPES)
+                for building_type in BuildingType
             }
-            for house_type in t.get_args(HOUSE_TYPES)
+            for house_type in HouseType
         }
 
         profiles_mapping_paths = {
             house_type: {
                 building_type: self.data_path / f"e_profile_{house_type}_{building_type}.json"
-                for building_type in t.get_args(BUILDING_TYPES)
+                for building_type in BuildingType
             }
-            for house_type in t.get_args(HOUSE_TYPES)
+            for house_type in HouseType
         }
         self.profiles_mapping = {
             house_type: {
@@ -167,48 +176,70 @@ class Household(Tech):
                     "ProfilesMapping",
                     load_json_from_file(profiles_mapping_paths[house_type][building_type]),
                 )
-                for building_type in t.get_args(BUILDING_TYPES)
+                for building_type in BuildingType
             }
-            for house_type in t.get_args(HOUSE_TYPES)
+            for house_type in HouseType
         }
 
         type_days_path = self.data_path / "type_days.json"
         self.type_days_mapping = t.cast("TypeDaysMapping", load_json_from_file(type_days_path))
 
-    def run(self, *, thermal: bool = True, electrical: bool = True, random_shift: bool = False) -> None:
-        index = dates.date_range(self.tz, freq=dt.timedelta(seconds=self.freq), year=self.dates.year[0])
-        if thermal is True:
-            water_thermal_demand = self._calculate_water_thermal_demand()
-            heating_thermal_demand = self._calculate_heating_thermal_demand()
-            if random_shift is True:
-                water_thermal_demand = np.roll(
-                    water_thermal_demand,
-                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
-                )
-                heating_thermal_demand = np.roll(
-                    heating_thermal_demand,
-                    random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
-                )
+    def run(
+        self,
+        *,
+        thermal: bool = True,
+        electrical: bool = True,
+        random_shift: bool = False,
+    ) -> Result[None, ValueError]:
+        """Thermal and electrical demand profiles on :attr:`dates`.
 
-            self.thw.loc[:, "high"] = self._resample_as_array(
-                target=pd.Series(data=water_thermal_demand),
-                index=index,
-            )
-            self.thr.loc[:, "high"] = self._resample_as_array(
-                target=pd.Series(data=heating_thermal_demand),
-                index=index,
-            )
+        Returns:
+            ``Err`` if a profile cannot be moved onto :attr:`dates`; the
+            thermal profiles are then written and the electrical ones are not.
+        """
+        index = dates.date_range(self.tz, freq=dt.timedelta(seconds=self.freq), year=self.dates.year[0])
+        result: Result[None, ValueError] = Ok(None)
+        if thermal is True:
+            result = result.and_then(lambda _: self._run_thermal(index, random_shift=random_shift))
 
         if electrical is True:
-            active_electrical_demand = self._calculate_active_electrical_demand()
-            if random_shift is True:
-                active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))  # noqa: S311
+            result = result.and_then(lambda _: self._run_electrical(index, random_shift=random_shift))
 
-            self.acp.loc[:, ("high", "L1")] = self._resample_as_array(
-                target=pd.Series(data=active_electrical_demand),
-                index=index,
+        return result
+
+    def _run_thermal(self, index: pd.DatetimeIndex, *, random_shift: bool) -> Result[None, ValueError]:
+        water_thermal_demand = self._calculate_water_thermal_demand()
+        heating_thermal_demand = self._calculate_heating_thermal_demand()
+        if random_shift is True:
+            water_thermal_demand = np.roll(
+                water_thermal_demand,
+                random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
             )
-            self.acq.loc[:, ("high", "L1")] = self._calculate_reactive_electrical_demand()
+            heating_thermal_demand = np.roll(
+                heating_thermal_demand,
+                random.randint(-PROFILE_SHIFT_LENGTH // self.freq, PROFILE_SHIFT_LENGTH // self.freq),  # noqa: S311
+            )
+
+        water = self._resample_as_array(target=pd.Series(data=water_thermal_demand), index=index)
+        heating = self._resample_as_array(target=pd.Series(data=heating_thermal_demand), index=index)
+        return water.and_then(lambda water_: heating.map(lambda heating_: self._set_thermal(water_, heating_)))
+
+    def _set_thermal(self, water: npt.NDArray[np.float64], heating: npt.NDArray[np.float64]) -> None:
+        self.thw.loc[:, "high"] = water
+        self.thr.loc[:, "high"] = heating
+
+    def _run_electrical(self, index: pd.DatetimeIndex, *, random_shift: bool) -> Result[None, ValueError]:
+        active_electrical_demand = self._calculate_active_electrical_demand()
+        if random_shift is True:
+            active_electrical_demand = np.roll(active_electrical_demand, random.randint(-8, 8))  # noqa: S311
+
+        return self._resample_as_array(target=pd.Series(data=active_electrical_demand), index=index).map(
+            self._set_electrical,
+        )
+
+    def _set_electrical(self, acp: npt.NDArray[np.float64]) -> None:
+        self.acp.loc[:, ("high", "L1")] = acp
+        self.acq.loc[:, ("high", "L1")] = self._calculate_reactive_electrical_demand()
 
     def _calculate_water_thermal_demand(self) -> npt.NDArray[np.float64]:
         energy = WATER_DEMAND[self.house_type] * self.n_units
@@ -230,10 +261,7 @@ class Household(Tech):
         type_factor: int,
         offset: int,
     ) -> npt.NDArray[np.float64]:
-        if self.climate_zone is None:
-            raise exceptions.ModelNotRunError
-
-        factors = self.factors[f"f_{profile_type}"][self.climate_zone]
+        factors = self.factors[f"f_{profile_type}"][self._zone]
         profiles = self.profiles[f"e_{profile_type}"]
 
         energies_daily = {td: energy * (offset / 365 + type_factor * fac) for td, fac in factors.items()}

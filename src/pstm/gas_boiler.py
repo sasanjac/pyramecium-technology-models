@@ -1,36 +1,34 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
-from typing import Literal
+import enum
+import typing as t
 
 import attrs
 
+from pstm.base import HeatingType
 from pstm.base import Tech
+
+
+class GasType(enum.StrEnum):
+    CH4 = "CH4"
+    H2 = "H2"
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
 class GasBoiler(Tech):
     power_inst: float
     efficiency: float
-    heating_type: Literal["room", "process_low", "process_high"]
-    gas_type: Literal["CH4", "H2"]
+    heating_type: HeatingType = attrs.field(converter=HeatingType)
+    gas_type: GasType = attrs.field(converter=GasType)
 
     def __attrs_post_init__(self) -> None:
-        if self.heating_type == "room":
-            self.thr.low = -self.power_inst
-        elif self.heating_type == "process_low":
-            self.thl.low = -self.power_inst
-        elif self.heating_type == "process_high":
-            self.thh.low = -self.power_inst
-        else:
-            msg = f"Unknown heating type {self.heating_type!r}."
-            raise ValueError(msg)
-
-        if self.gas_type == "CH4":
-            self.ch4.high = self.power_inst / self.efficiency
-        elif self.gas_type == "H2":
-            self.h2.high = self.power_inst / self.efficiency
-        else:
-            msg = f"Unknown gas type {self.gas_type!r}."
-            raise ValueError(msg)
+        self.heat(self.heating_type).low = -self.power_inst
+        match self.gas_type:
+            case GasType.CH4:
+                self.ch4.high = self.power_inst / self.efficiency
+            case GasType.H2:
+                self.h2.high = self.power_inst / self.efficiency
+            case _:
+                t.assert_never(self.gas_type)

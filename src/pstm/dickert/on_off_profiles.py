@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
@@ -299,7 +299,7 @@ class OnOffProfiles(OperationProfiles):
                 )
 
             prob2 = self._sim_distribution(
-                distribution_type="unif",
+                distribution_type=DistributionType.UNIF,
                 parameter_1=0.5,
                 parameter_2=0.5,
                 n_steps=n_days,
@@ -330,38 +330,39 @@ class OnOffProfiles(OperationProfiles):
         clear: bool = True,
         generator: np.random.Generator,
     ) -> npt.NDArray[np.float64]:
-        if distribution_type == "unif" and self.use_probability:
-            p = np.zeros((n_steps, n_units), dtype=np.float64)
-            prob = self._sim_distribution(
-                distribution_type=distribution_type,
-                parameter_1=0.5,
-                parameter_2=0.5,
-                n_units=n_units,
-                clear=False,
-                generator=generator,
-            )
-            n = np.cumsum(
-                [
-                    self.probability_1,
-                    self.probability_2,
-                    self.probability_3,
-                    self.probability_4,
-                ],
-            )
-            p[:, prob < n[0]] = self.active_power_parameter_1
-            p[:, (prob >= n[0]) & (prob < n[1])] = self.active_power_parameter_2
-            p[:, (prob >= n[1]) & (prob < n[2])] = self.active_power_parameter_3
-            p[:, (prob >= n[2]) & (prob < n[3])] = self.active_power_parameter_4
+        match distribution_type:
+            case DistributionType.UNIF if self.use_probability:
+                p = np.zeros((n_steps, n_units), dtype=np.float64)
+                prob = self._sim_distribution(
+                    distribution_type=distribution_type,
+                    parameter_1=0.5,
+                    parameter_2=0.5,
+                    n_units=n_units,
+                    clear=False,
+                    generator=generator,
+                )
+                n = np.cumsum(
+                    [
+                        self.probability_1,
+                        self.probability_2,
+                        self.probability_3,
+                        self.probability_4,
+                    ],
+                )
+                p[:, prob < n[0]] = self.active_power_parameter_1
+                p[:, (prob >= n[0]) & (prob < n[1])] = self.active_power_parameter_2
+                p[:, (prob >= n[1]) & (prob < n[2])] = self.active_power_parameter_3
+                p[:, (prob >= n[2]) & (prob < n[3])] = self.active_power_parameter_4
 
-            return p
-
-        return self._sim_distribution(
-            distribution_type=distribution_type,
-            parameter_1=parameter_1,
-            parameter_2=parameter_2,
-            n_units=n_units,
-            n_steps=n_steps,
-            factor=factor,
-            clear=clear,
-            generator=generator,
-        )
+                return p
+            case _:
+                return self._sim_distribution(
+                    distribution_type=distribution_type,
+                    parameter_1=parameter_1,
+                    parameter_2=parameter_2,
+                    n_units=n_units,
+                    n_steps=n_steps,
+                    factor=factor,
+                    clear=clear,
+                    generator=generator,
+                )

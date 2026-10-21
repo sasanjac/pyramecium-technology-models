@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ class CycleProfiles(OperationProfiles):
             generator=generator,
         )
         shift = self._sim_distribution_round(
-            distribution_type="unif",
+            distribution_type=DistributionType.UNIF,
             parameter_1=0,
             parameter_2=float(np.max(period_length[0, :])),
             n_steps=1,

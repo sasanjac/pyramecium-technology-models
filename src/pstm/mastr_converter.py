@@ -1,13 +1,19 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
+import math
 import pathlib
 import typing as t
 
 import attrs
 import numpy as np
 import pandas as pd
+from pyochain import NONE
+from pyochain import Null
+from pyochain import Option
+from pyochain import Some
+from pyochain import then_if_true
 
 if t.TYPE_CHECKING:
 
@@ -16,7 +22,7 @@ if t.TYPE_CHECKING:
         export_path: pathlib.Path
         columns_extra: t.NotRequired[list[str]]
         conds_extra: t.NotRequired[list[tuple[str, ...]]]
-        n_files: t.NotRequired[int]
+        n_files: t.NotRequired[Option[int]]
 
 
 SRC_PATH = pathlib.Path(__file__).parent.parent.parent
@@ -39,14 +45,14 @@ class MaStRCatalog:
         values = self._catalog[condition]["Id"].to_numpy(dtype=np.int64).flatten()
         return int(values[0]) if values.size > 0 else -1
 
-    def get_value(self, code: float) -> str | None:
-        try:
-            condition = self._catalog["Id"] == int(code)
-        except ValueError:
-            return None
-        else:
-            values = self._catalog[condition]["Wert"].to_numpy()
-            return str(values[0]) if values.size > 0 else None
+    def get_value(self, code: float) -> Option[str]:
+        """Catalog value of ``code``, ``NONE`` for a code that is not finite or not in the catalog."""
+        return (
+            then_if_true(code, predicate=math.isfinite)
+            .map(lambda code_: self._catalog[self._catalog["Id"] == int(code_)]["Wert"].to_numpy())
+            .and_then(lambda values: then_if_true(values, predicate=lambda v: v.size > 0))
+            .map(lambda values: str(values[0]))
+        )
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -55,13 +61,14 @@ class MaStRConverter:
     export_path: pathlib.Path
     columns_extra: list[str] = attrs.field(factory=list)
     conds_extra: list[tuple[str, ...]] = attrs.field(factory=list)
-    n_files: int | None = None
+    n_files: Option[int] = NONE
 
     def __attrs_post_init__(self) -> None:
-        if self.n_files is None:
-            self.dataframe = import_xml(self.path)
-        else:
-            self.dataframe = import_xmls(self.path, self.n_files)
+        match self.n_files:
+            case Some(n_files):
+                self.dataframe = import_xmls(self.path, n_files)
+            case Null():
+                self.dataframe = import_xml(self.path)
 
         self.catalog = MaStRCatalog(path=CATALOG_PATH)
         columns = DEFAULT_COLUMNS + self.columns_extra
@@ -94,7 +101,9 @@ class MaStRConverter:
         dataframe["Postleitzahl"] = dataframe["Postleitzahl"].fillna(0)
         dataframe["Postleitzahl"] = dataframe["Postleitzahl"].astype(int)
         if "Hersteller" in columns:
-            dataframe["Hersteller"] = dataframe["Hersteller"].apply(self.catalog.get_value)
+            dataframe["Hersteller"] = dataframe["Hersteller"].apply(
+                lambda code: self.catalog.get_value(code).unwrap_or_none(),
+            )
 
         return dataframe
 
@@ -120,7 +129,7 @@ def main() -> None:
         {
             "path": SRC_PATH / "data/mastr/EinheitenSolar",
             "export_path": SRC_PATH / "data/mastr/20210727-EinheitenSolar_stripped.parquet.gzip",
-            "n_files": 21,
+            "n_files": Some(21),
         },
         {
             "path": SRC_PATH / "data/mastr/EinheitenWind.xml",

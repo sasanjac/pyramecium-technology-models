@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 """Unit tests for Gas Boiler technology model."""
 
 from __future__ import annotations
@@ -134,23 +134,23 @@ class TestGasBoilerInvalidInputs:
         return date_range(tz=TZ, year=2024)[:96]
 
     def test_invalid_heating_type(self, dates) -> None:
-        """Test invalid heating type raises error."""
-        with pytest.raises(ValueError, match="heating type 'invalid'"):
-            GasBoiler(
-                dates=dates,
-                power_inst=20000,
-                efficiency=0.92,
-                heating_type="invalid",  # type: ignore[arg-type]
-                gas_type="CH4",
-            )
+        """Test invalid heating type is an error."""
+        boiler = GasBoiler.create(
+            dates=dates,
+            power_inst=20000,
+            efficiency=0.92,
+            heating_type="invalid",
+            gas_type="CH4",
+        )
+        assert "is not a valid HeatingType" in str(boiler.unwrap_err())
 
     def test_invalid_gas_type(self, dates) -> None:
-        """Test invalid gas type raises error."""
-        with pytest.raises(ValueError, match="gas type 'invalid'"):
-            GasBoiler(
-                dates=dates,
-                power_inst=20000,
-                efficiency=0.92,
-                heating_type="room",
-                gas_type="invalid",  # type: ignore[arg-type]
-            )
+        """Test invalid gas type is an error."""
+        boiler = GasBoiler.create(
+            dates=dates,
+            power_inst=20000,
+            efficiency=0.92,
+            heating_type="room",
+            gas_type="invalid",
+        )
+        assert "is not a valid GasType" in str(boiler.unwrap_err())

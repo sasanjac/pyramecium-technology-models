@@ -4,31 +4,58 @@ from __future__ import annotations
 
 import abc
 import datetime as dt
+import enum
 import typing as t
-from typing import Literal
 
 import attrs
 import numpy as np
 import pandas as pd
+from pyochain import NONE
+from pyochain import Err
+from pyochain import Null
+from pyochain import Ok
+from pyochain import Option
+from pyochain import Result
+from pyochain import Some
 
 from pstm.base import Tech
 from pstm.utils.ground import kusuda_ground_temperature
 
+
+class Efficiency(enum.StrEnum):
+    """Efficiency class of a residential heat pump."""
+
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+
+
+class IndustrialEfficiency(enum.StrEnum):
+    """Efficiency class of an industrial heat pump."""
+
+    NORMAL = "normal"
+    HIGH = "high"
+
+
+class HeatingSystem(enum.StrEnum):
+    """Sink of :func:`sink_temperature`; ``CONSTANT`` takes its temperature from ``sink_temp``."""
+
+    RADIATOR = "radiator"
+    FLOOR = "floor"
+    WATER = "water"
+    CONSTANT = "constant"
+
+
 EFFICIENCY_OFFSETS = {
-    "low": -0.5,
-    "normal": 0,
-    "high": 0.5,
+    Efficiency.LOW: -0.5,
+    Efficiency.NORMAL: 0,
+    Efficiency.HIGH: 0.5,
 }
 """Additive COP offset per efficiency class.
 
 The classes are an assumption of this work for future devices; Ruhnau et al.
 (2019) define none.  ``normal`` reproduces the source.
 """
-
-HeatingSystem = Literal["radiator", "floor", "water", "constant"]
-
-HEATING_SYSTEMS: tuple[HeatingSystem, ...] = ("radiator", "floor", "water", "constant")
-"""Sinks of :func:`sink_temperature`; ``constant`` takes its temperature from ``sink_temp``."""
 
 MIN_TEMP_DIFF = 15.0
 """Lower bound in K of the source-to-sink temperature difference (Ruhnau et al. 2019)."""
@@ -49,8 +76,8 @@ WATER_HEATING_TEMP = 50.0
 def sink_temperature(
     heating_system: HeatingSystem,
     temp_amb: pd.Series,
-    sink_temp: float | None = None,
-) -> pd.Series:
+    sink_temp: Option[float] = NONE,
+) -> Result[pd.Series, ValueError]:
     """Sink temperature of eq. (6) of Ruhnau et al. (2019), or a constant sink.
 
     Radiator heating supplies ``40 - 1.0 T_amb``, floor heating
@@ -65,25 +92,24 @@ def sink_temperature(
         sink_temp: Sink temperature in degC of the ``constant`` sink.
 
     Returns:
-        The sink temperature in degC on the index of ``temp_amb``.
-
-    Raises:
-        ValueError: If ``heating_system`` is unknown, or if ``sink_temp`` is
-            given for another sink than ``constant`` or missing for it.
+        ``Ok`` with the sink temperature in degC on the index of ``temp_amb``.
+        ``Err`` if ``heating_system`` is unknown, or if ``sink_temp`` is
+        given for another sink than ``constant`` or missing for it.
     """
-    if (heating_system == "constant") != (sink_temp is not None):
-        msg = f"sink_temp is required for the constant sink and only for it, got {heating_system!r} with {sink_temp!r}."
-        raise ValueError(msg)
-    if heating_system == "constant":
-        return pd.Series(float(t.cast("float", sink_temp)), index=temp_amb.index)
-    if heating_system == "radiator":
-        return 40.0 - 1.0 * temp_amb
-    if heating_system == "floor":
-        return 30.0 - 0.5 * temp_amb
-    if heating_system == "water":
-        return pd.Series(WATER_HEATING_TEMP, index=temp_amb.index)
-    msg = f"Unknown heating system {heating_system!r}."
-    raise ValueError(msg)
+    match heating_system, sink_temp:
+        case HeatingSystem.CONSTANT, Some(temp):
+            return Ok(pd.Series(float(temp), index=temp_amb.index))
+        case HeatingSystem.RADIATOR, Null():
+            return Ok(40.0 - 1.0 * temp_amb)
+        case HeatingSystem.FLOOR, Null():
+            return Ok(30.0 - 0.5 * temp_amb)
+        case HeatingSystem.WATER, Null():
+            return Ok(pd.Series(WATER_HEATING_TEMP, index=temp_amb.index))
+        case HeatingSystem(), _:
+            msg = f"sink_temp is required for the constant sink and only for it, got {heating_system!r} with {sink_temp!r}."
+            return Err(ValueError(msg))
+        case _:
+            return Err(ValueError(f"Unknown heating system {heating_system!r}."))
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -92,18 +118,31 @@ class HeatPump(Tech, abc.ABC):
     cosphi: float = attrs.field(default=0.7)
     tz: dt.tzinfo
 
-    def run(self, temp: pd.Series, thermal_demand: pd.Series | None = None) -> None:
-        temp_diff_raw = self.calc_temp_diff(temp)
-        index = t.cast("pd.DatetimeIndex", temp.index)
-        temp_diff = self._resample(target=temp_diff_raw, index=index)
+    def run(self, temp: pd.Series, thermal_demand: Option[pd.Series] = NONE) -> Result[None, ValueError]:
+        """Thermal and electrical profiles for the ambient temperature ``temp``.
 
-        cop = self.calc_cop(temp_diff)
-        if thermal_demand is None:
-            self._th.loc[:, "low"] = (-cop * self.power_inst).to_numpy(dtype=np.float64)
-            self.acp.loc[:, ("high", "L1")] = self.power_inst * np.ones(len(self.dates))
-        else:
-            self._th.loc[:, "low"] = (-thermal_demand).to_numpy(dtype=np.float64)
-            self.acp.loc[:, ("high", "L1")] = np.divide(thermal_demand, cop)
+        Without ``thermal_demand`` the pump runs at ``power_inst``; with it, the
+        electrical input follows the demand.
+
+        Returns:
+            ``Err`` if the temperature difference cannot be evaluated or moved
+            onto :attr:`dates`.
+        """
+        index = t.cast("pd.DatetimeIndex", temp.index)
+        return (
+            self.calc_temp_diff(temp)
+            .and_then(lambda temp_diff: self._resample(target=temp_diff, index=index))
+            .map(lambda temp_diff: self._set_power(self.calc_cop(temp_diff), thermal_demand))
+        )
+
+    def _set_power(self, cop: pd.Series, thermal_demand: Option[pd.Series]) -> None:
+        match thermal_demand:
+            case Some(demand):
+                self._th.loc[:, "low"] = (-demand).to_numpy(dtype=np.float64)
+                self.acp.loc[:, ("high", "L1")] = np.divide(demand, cop)
+            case Null():
+                self._th.loc[:, "low"] = (-cop * self.power_inst).to_numpy(dtype=np.float64)
+                self.acp.loc[:, ("high", "L1")] = self.power_inst * np.ones(len(self.dates))
 
         self.acq.loc[:, ("high", "L1")] = (
             self.acp.loc[:, "high"].loc[:, "L1"] * np.tan(np.arccos(self.cosphi))
@@ -112,7 +151,7 @@ class HeatPump(Tech, abc.ABC):
         )
 
     @abc.abstractmethod
-    def calc_temp_diff(self, temp: pd.Series) -> pd.Series:
+    def calc_temp_diff(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -157,22 +196,28 @@ class ResidentialHeatPump(HeatPump):
     household fills from ``thr`` (``TW`` is the carrier of ``thw``).
     """
 
-    heating_system: HeatingSystem = attrs.field(validator=attrs.validators.in_(HEATING_SYSTEMS))
-    efficiency: Literal["high", "normal", "low"]
-    sink_temp: float | None = attrs.field(default=None)
+    heating_system: HeatingSystem = attrs.field(converter=HeatingSystem)
+    efficiency: Efficiency = attrs.field(converter=Efficiency)
+    sink_temp: Option[float] = attrs.field(default=NONE)
 
     @sink_temp.validator
-    def _check_sink_temp(self, _attribute: attrs.Attribute, value: float | None) -> None:
-        if (self.heating_system == "constant") != (value is not None):
-            msg = (
-                "sink_temp is required for heating_system 'constant' and only for it, "
-                f"got {self.heating_system!r} with sink_temp={value!r}."
-            )
-            raise ValueError(msg)
+    def _check_sink_temp(self, _attribute: attrs.Attribute, value: Option[float]) -> None:
+        # attrs reports an invalid field only by raising; ``create`` returns it as ``Err``.
+        match sink_temperature(self.heating_system, pd.Series(dtype=np.float64), value):
+            case Err(error):
+                raise error
+            case Ok():
+                pass
 
     @property
     def _th(self) -> pd.DataFrame:
-        return self.thw if self.heating_system == "water" else self.thr
+        match self.heating_system:
+            case HeatingSystem.WATER:
+                return self.thw
+            case HeatingSystem.RADIATOR | HeatingSystem.FLOOR | HeatingSystem.CONSTANT:
+                return self.thr
+            case _:
+                t.assert_never(self.heating_system)
 
     @property
     def th(self) -> pd.DataFrame:
@@ -180,13 +225,16 @@ class ResidentialHeatPump(HeatPump):
         return self._th
 
     @abc.abstractmethod
-    def source_temperature(self, temp: pd.Series) -> pd.Series:
+    def source_temperature(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
         """Heat source temperature in degC on the index of the ambient air temperature ``temp``."""
         raise NotImplementedError
 
-    def calc_temp_diff(self, temp: pd.Series) -> pd.Series:
-        temp_diff = sink_temperature(self.heating_system, temp, self.sink_temp) - self.source_temperature(temp)
-        return temp_diff.clip(lower=MIN_TEMP_DIFF)
+    def calc_temp_diff(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
+        return (
+            sink_temperature(self.heating_system, temp, self.sink_temp)
+            .and_then(lambda sink: self.source_temperature(temp).map(lambda source: sink - source))
+            .map(lambda temp_diff: temp_diff.clip(lower=MIN_TEMP_DIFF))
+        )
 
     @abc.abstractmethod
     def cop_curve(self, temp_diff: pd.Series) -> pd.Series:
@@ -201,8 +249,8 @@ class ResidentialHeatPump(HeatPump):
 class AirHeatPump(ResidentialHeatPump):
     """Air-source heat pump; the source is the ambient air."""
 
-    def source_temperature(self, temp: pd.Series) -> pd.Series:
-        return temp
+    def source_temperature(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
+        return Ok(temp)
 
     def cop_curve(self, temp_diff: pd.Series) -> pd.Series:
         return 6.08 - 0.09 * temp_diff + 0.0005 * temp_diff**2
@@ -214,16 +262,21 @@ class BrineHeatPump(ResidentialHeatPump):
 
     Ruhnau et al. (2019) take the ground temperature from ERA-Interim soil
     level 4 (1.00 m to 2.89 m).  Without a soil series (``ground_temp`` is
-    None) the ground temperature at the midpoint of that layer follows from
+    ``NONE``) the ground temperature at the midpoint of that layer follows from
     the air temperature through :func:`pstm.utils.ground.kusuda_ground_temperature`,
     which needs at least one year of air temperature.
     """
 
-    ground_temp: pd.Series | None = None
+    ground_temp: Option[pd.Series] = NONE
 
-    def source_temperature(self, temp: pd.Series) -> pd.Series:
-        ground = kusuda_ground_temperature(temp) if self.ground_temp is None else self.ground_temp.reindex(temp.index)
-        return ground - BRINE_TEMP_DROP
+    def source_temperature(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
+        match self.ground_temp:
+            case Some(ground_temp):
+                ground: Result[pd.Series, ValueError] = Ok(ground_temp.reindex(temp.index))
+            case Null():
+                ground = kusuda_ground_temperature(temp)
+
+        return ground.map(lambda ground_temp: ground_temp - BRINE_TEMP_DROP)
 
     def cop_curve(self, temp_diff: pd.Series) -> pd.Series:
         return 10.29 - 0.21 * temp_diff + 0.0012 * temp_diff**2
@@ -233,8 +286,8 @@ class BrineHeatPump(ResidentialHeatPump):
 class WaterHeatPump(ResidentialHeatPump):
     """Groundwater-source heat pump; the source is a constant 10 degC minus 5 K."""
 
-    def source_temperature(self, temp: pd.Series) -> pd.Series:
-        return pd.Series(GROUNDWATER_TEMP - BRINE_TEMP_DROP, index=temp.index)
+    def source_temperature(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
+        return Ok(pd.Series(GROUNDWATER_TEMP - BRINE_TEMP_DROP, index=temp.index))
 
     def cop_curve(self, temp_diff: pd.Series) -> pd.Series:
         return 9.97 - 0.20 * temp_diff + 0.0012 * temp_diff**2
@@ -250,18 +303,19 @@ class IndustrialHeatPump(HeatPump):
     """
 
     target_temp: float
-    efficiency: Literal["high", "normal"]
+    efficiency: IndustrialEfficiency = attrs.field(converter=IndustrialEfficiency)
 
-    def calc_temp_diff(self, temp: pd.Series) -> pd.Series:
-        return self.target_temp - temp
+    def calc_temp_diff(self, temp: pd.Series) -> Result[pd.Series, ValueError]:
+        return Ok(self.target_temp - temp)
 
     def calc_cop(self, temp_diff: pd.Series) -> pd.Series:
-        if self.efficiency == "high":
-            base_value = 80.84
-        elif self.efficiency == "normal":
-            base_value = 68.455
-        else:
-            raise ValueError
+        match self.efficiency:
+            case IndustrialEfficiency.HIGH:
+                base_value = 80.84
+            case IndustrialEfficiency.NORMAL:
+                base_value = 68.455
+            case _:
+                t.assert_never(self.efficiency)
 
         return base_value / (temp_diff**0.76)
 

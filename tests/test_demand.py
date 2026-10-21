@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 """Unit tests for Demand technology model."""
 
 from __future__ import annotations
@@ -8,6 +8,7 @@ import zoneinfo as zi
 import numpy as np
 import pandas as pd
 import pytest
+from pyochain import Some
 
 from pstm.demand import SeriesDemand
 from pstm.utils.dates import date_range
@@ -206,7 +207,7 @@ class TestSeriesDemandReactivePower:
             factor_thr=1.0,
             factor_thl=1.0,
             factor_thh=1.0,
-            series_acq=acq_series,
+            series_acq=Some(acq_series),
             factor_acq=1.0,
         )
         # When series_acq is provided, acq must come from series_acq * factor_acq

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
@@ -10,6 +10,10 @@ import attrs
 import numpy as np
 import numpy.typing as npt
 import pvlib
+from pyochain import NONE
+from pyochain import Null
+from pyochain import Option
+from pyochain import Some
 
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
@@ -206,21 +210,22 @@ class LightingProfiles(Appliances):
     ) -> npt.NDArray[np.float64]:
         top_1 = self.time_on_parameters_1[parameter_index]
         top_2 = self.time_on_parameters_2[parameter_index]
+        time_on_user: Option[npt.NDArray[np.int64]] = NONE
         if NaT not in {top_1, top_2}:
-            time_on_user = self._calc_time_on_user(
-                n_units=n_units,
-                n_steps=n_steps,
-                n_days=n_days,
-                time_on_distribution_types=self.time_on_distribution_types[parameter_index],
-                time_on_parameters_1=top_1,
-                time_on_parameters_2=top_2,
-                day_index_start=day_index_start,
-                day_index_end=day_index_end,
-                add_tail=add_tail,
-                generator=generator,
+            time_on_user = Some(
+                self._calc_time_on_user(
+                    n_units=n_units,
+                    n_steps=n_steps,
+                    n_days=n_days,
+                    time_on_distribution_types=self.time_on_distribution_types[parameter_index],
+                    time_on_parameters_1=top_1,
+                    time_on_parameters_2=top_2,
+                    day_index_start=day_index_start,
+                    day_index_end=day_index_end,
+                    add_tail=add_tail,
+                    generator=generator,
+                ),
             )
-        else:
-            time_on_user = None
 
         time_off = self._calc_time_off_user(
             n_units=n_units,
@@ -246,8 +251,11 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
-        if time_on_user is not None:
-            time_on = np.max([time_on_user, time_on], axis=0)
+        match time_on_user:
+            case Some(time_on_user_):
+                time_on = np.max([time_on_user_, time_on], axis=0)
+            case Null():
+                pass
 
         return self._calc_power_from_times(
             n_units=n_units,
@@ -330,21 +338,22 @@ class LightingProfiles(Appliances):
         )
         top_1 = self.time_off_parameters_1[parameter_index]
         top_2 = self.time_off_parameters_2[parameter_index]
+        time_off_user: Option[npt.NDArray[np.int64]] = NONE
         if NaT not in {top_1, top_2}:
-            time_off_user = self._calc_time_off_user(
-                n_units=n_units,
-                n_steps=n_steps,
-                time_off_distribution_types=self.time_off_distribution_types[parameter_index],
-                time_off_parameters_1=top_1,
-                time_off_parameters_2=top_2,
-                n_days=n_days,
-                day_index_start=day_index_start,
-                day_index_end=day_index_end,
-                add_tail=add_tail,
-                generator=generator,
+            time_off_user = Some(
+                self._calc_time_off_user(
+                    n_units=n_units,
+                    n_steps=n_steps,
+                    time_off_distribution_types=self.time_off_distribution_types[parameter_index],
+                    time_off_parameters_1=top_1,
+                    time_off_parameters_2=top_2,
+                    n_days=n_days,
+                    day_index_start=day_index_start,
+                    day_index_end=day_index_end,
+                    add_tail=add_tail,
+                    generator=generator,
+                ),
             )
-        else:
-            time_off_user = None
 
         time_off = self._calc_time_off_sunrise(
             n_units=n_units,
@@ -357,8 +366,11 @@ class LightingProfiles(Appliances):
             generator=generator,
         )
 
-        if time_off_user is not None:
-            time_off = np.min([time_off_user, time_off], axis=0)
+        match time_off_user:
+            case Some(time_off_user_):
+                time_off = np.min([time_off_user_, time_off], axis=0)
+            case Null():
+                pass
 
         return self._calc_power_from_times(
             n_units=n_units,
@@ -385,7 +397,7 @@ class LightingProfiles(Appliances):
             time_off[idx, i] = 0
 
         prob_1 = self._sim_distribution(
-            distribution_type="unif",
+            distribution_type=DistributionType.UNIF,
             parameter_1=0,
             parameter_2=1,
             n_steps=n_days,

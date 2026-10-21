@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -6,6 +6,10 @@ import attrs
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from pyochain import NONE
+from pyochain import Null
+from pyochain import Option
+from pyochain import Some
 
 from pstm.base import Tech
 
@@ -20,7 +24,7 @@ class SeriesDemand(Tech):
     factor_thr: float
     factor_thl: float
     factor_thh: float
-    series_acq: pd.Series | npt.NDArray[np.float64] | None = None
+    series_acq: Option[pd.Series | npt.NDArray[np.float64]] = NONE
     factor_acq: float = attrs.field(default=1)
     cosphi: float = attrs.field(default=0.9)
 
@@ -41,7 +45,11 @@ class SeriesDemand(Tech):
         self.thh.high = thh
         self.thh.base = thh
         self.thh.low = thh
-        acq = self.series_acq * self.factor_acq if self.series_acq is not None else acp * np.tan(np.arccos(self.cosphi))
+        match self.series_acq:
+            case Some(series_acq):
+                acq = series_acq * self.factor_acq
+            case Null():
+                acq = acp * np.tan(np.arccos(self.cosphi))
 
         self.acq.high = acq
         self.acq.base = acq

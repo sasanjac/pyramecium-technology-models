@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ import attrs
 import cattrs
 import numpy as np
 import pandas as pd
+from pyochain import Iter
+from pyochain import option
 
 from pstm.base import Tech
 from pstm.dickert.appliances import Appliances
@@ -29,6 +31,7 @@ if t.TYPE_CHECKING:
     import pathlib
 
     import numpy.typing as npt
+    from pyochain import Result
 
     Array2DF = npt.NDArray[np.float64]
 
@@ -206,7 +209,13 @@ class Households:
         year: int,
         generator: np.random.Generator,
         baseline_only: bool = False,
-    ) -> None:
+    ) -> Result[None, ValueError]:
+        """Power of ``n_units`` households as the sum over their appliances.
+
+        Returns:
+            ``Err`` with the error of the first appliance that fails; :attr:`p`
+            and :attr:`q` then stay unchanged.
+        """
         from pstm.utils import geo  # noqa: PLC0415 - optional extra geo
 
         with geo.GeoRef(use_clc=False) as georef:
@@ -216,19 +225,25 @@ class Households:
         self.year = year
 
         appliances = self.appliances if not baseline_only else self.baseline_appliances
-        for app in appliances:
-            app.run(
-                n_units=n_units,
-                n_steps=self.n_steps,
-                phase_distribution=self.phase_distribution,
-                lat=lat,
-                lon=lon,
-                altitude=altitude,
-                year=year,
-                tz=self.tz,
-                generator=generator,
+        return (
+            Iter[Appliances](appliances)
+            .try_for_each(
+                lambda app: app.run(
+                    n_units=n_units,
+                    n_steps=self.n_steps,
+                    phase_distribution=self.phase_distribution,
+                    lat=lat,
+                    lon=lon,
+                    altitude=altitude,
+                    year=year,
+                    tz=self.tz,
+                    generator=generator,
+                ),
             )
+            .map(lambda _: self._sum_appliances(appliances))
+        )
 
+    def _sum_appliances(self, appliances: cabc.Sequence[Appliances]) -> None:
         self.p = np.sum([app.p for app in appliances], axis=0)
         self.q = np.sum([app.q for app in appliances], axis=0)
 
@@ -269,25 +284,33 @@ class Households:
 
         return cattrs.structure(data, Households)
 
-    def get(self, index_target: pd.DatetimeIndex) -> Tech:
+    def get(self, index_target: pd.DatetimeIndex) -> Result[Tech, ValueError]:
+        """Power of the next household on ``index_target``.
+
+        The household is removed from :attr:`p` and :attr:`q` only if
+        ``index_target`` has a frequency.
+
+        Returns:
+            ``Err`` if ``index_target`` has no frequency.
+        """
+        return (
+            option(index_target.freq)
+            .ok_or(ValueError("The frequency of the index is not set."))
+            .map(lambda freq: self._pop(index_target, freq))
+        )
+
+    def _pop(self, index_target: pd.DatetimeIndex, freq: pd.DateOffset) -> Tech:
         p, self.p = (self.p[:, 0, :], self.p[:, 1:, :])
         q, self.q = (self.q[:, 0, :], self.q[:, 1:, :])
         step_length = Constants.MINUTES_PER_YEAR / self.n_steps
         index = dates.date_range(tz=self.tz, year=self.year, freq=dt.timedelta(minutes=step_length))
-        dfp = pd.DataFrame(p, index=index)
-        dfq = pd.DataFrame(q, index=index)
-        freq = index_target.freq
-        if freq is None:
-            msg = "The frequency of the index is not set."
-            raise ValueError(msg)
+        dfp = pd.DataFrame(p, index=index).resample(rule=freq).mean()
+        dfq = pd.DataFrame(q, index=index).resample(rule=freq).mean()
 
-        dfp = dfp.resample(rule=freq).mean()
-        dfq = dfq.resample(rule=freq).mean()
-
-        t = Tech(dates=index_target)
-        t.acp = self._df_from_array(index=index_target, data=dfp.to_numpy())
-        t.acq = self._df_from_array(index=index_target, data=dfq.to_numpy())
-        return t
+        tech = Tech(dates=index_target)
+        tech.acp = self._df_from_array(index=index_target, data=dfp.to_numpy())
+        tech.acq = self._df_from_array(index=index_target, data=dfq.to_numpy())
+        return tech
 
     @staticmethod
     def _df_from_array(*, index: pd.DatetimeIndex, data: Array2DF) -> pd.DataFrame:

@@ -1,22 +1,33 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
 import abc
+import enum
 import typing as t
 
 import attrs
 import numpy as np
+from pyochain import Err
+from pyochain import Ok
+
+from pstm.utils.results import Constructible
 
 if t.TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Sequence
 
     import numpy.typing as npt
+    from pyochain import Result
 
 
-DistributionType = t.Literal["normal", "unif", "lognormal"]
+class DistributionType(enum.StrEnum):
+    NORMAL = "normal"
+    UNIF = "unif"
+    LOGNORMAL = "lognormal"
+
+
 Phase = t.Literal[0, 1, 2, 3]
 
 
@@ -57,7 +68,7 @@ def validate_level_sequence(
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
-class Appliances:
+class Appliances(Constructible):
     description: str
     phase: Phase
     switch_on_current: float
@@ -86,19 +97,19 @@ class Appliances:
         clear: bool = True,
     ) -> npt.NDArray[np.float64]:
         match distribution_type:
-            case "normal":
+            case DistributionType.NORMAL:
                 p = generator.normal(
                     loc=parameter_1,
                     scale=parameter_2,
                     size=(n_steps, n_units),
                 )
-            case "unif":
+            case DistributionType.UNIF:
                 p = generator.uniform(
                     low=parameter_1 - parameter_2,
                     high=parameter_1 + parameter_2,
                     size=(n_steps, n_units),
                 )
-            case "lognormal":
+            case DistributionType.LOGNORMAL:
                 p = (
                     generator.lognormal(
                         mean=parameter_1,
@@ -108,7 +119,7 @@ class Appliances:
                     * factor
                 )
             case _:
-                p = np.zeros((n_steps, n_units))
+                t.assert_never(distribution_type)
 
         if clear:
             p[p < 0] = 0
@@ -175,7 +186,12 @@ class Appliances:
         altitude: float,
         year: int,
         tz: dt.tzinfo,
-    ) -> None:
+    ) -> Result[None, ValueError]:
+        """Active and reactive power of ``n_units`` units on the phase of the appliance.
+
+        Returns:
+            ``Err`` if the simulated active power is negative.
+        """
         p, q = self._run(
             n_units=n_units,
             n_steps=n_steps,
@@ -187,8 +203,7 @@ class Appliances:
             generator=generator,
         )
         if np.any(p < 0):
-            msg = "active power can not be negative."
-            raise ValueError(msg)
+            return Err(ValueError("active power can not be negative."))
 
         if self.phase == 0:
             self.phase = generator.choice((1, 2, 3), p=phase_distribution)
@@ -197,6 +212,7 @@ class Appliances:
         self.p[:, :, self.phase - 1] = p
         self.q = np.zeros((n_steps, n_units, 3))
         self.q[:, :, self.phase - 1] = q
+        return Ok(None)
 
     @abc.abstractmethod
     def _run(
