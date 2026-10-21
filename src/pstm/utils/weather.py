@@ -554,8 +554,8 @@ class NEWA:
             raise ValueError(msg)
 
         time = data.variables["time"]
-        stamps = netCDF4.num2date(time[:], units=time.units, only_use_cftime_datetimes=False)
-        index_utc = pd.DatetimeIndex([pd.Timestamp(str(s)) for s in stamps]).tz_localize("UTC")
+        stamps = np.asarray(netCDF4.num2date(time[:], units=time.units, only_use_cftime_datetimes=False), dtype=object)
+        index_utc = pd.DatetimeIndex([pd.Timestamp(str(s)) for s in stamps.ravel()]).tz_localize("UTC")
         stop = pd.Timestamp(data.temporalExtentMaximum).tz_localize("UTC")
         keep = np.asarray(index_utc < stop)
         index = t.cast("pd.DatetimeIndex", index_utc[keep].tz_convert(tz))
