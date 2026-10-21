@@ -1,35 +1,51 @@
 ---
-  name: Check code
+name: Check code
 
-  on:
-    workflow_call:
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: >-
+          Commit to check out. Empty means the default ref of the triggering event,
+          which for pull_request_target is the base branch, so callers on that
+          event pass the head SHA of the pull request.
+        type: string
+        required: false
+        default: ""
 
-  jobs:
-    check-code:
-      name: Check code
-      runs-on: ubuntu-24.04
-      steps:
-        - name: Check out repository
-          uses: actions/checkout@v6.0.1
+jobs:
+  check-code:
+    name: Check code
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
 
-        - name: Check if commit messages are compliant
-          uses: webiny/action-conventional-commits@v1.3.0
-          with:
-            allowed-commit-types: "feat,fix,docs,style,refactor,perf,test,chore,bug,build,ci,bump"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
 
-        - name: Install uv
-          uses: astral-sh/setup-uv@v7.1.6
-          with:
-            enable-cache: true
+      - name: Install the project
+        run: uv sync --all-extras --all-groups --frozen
 
-        - name: Install the project
-          run: uv sync --dev --all-extras
+      - name: Check code
+        run: uv run ruff check .
 
-        - name: Check code
-          run: uv run ruff check .
+      - name: Check code format
+        run: uv run ruff format --check .
 
-        - name: Check code format
-          run: uv run ruff format --check .
+      - name: Dependency check using deptry
+        run: uv run deptry .
 
-        - name: Type check using mypy
-          run: uv run mypy .
+      - name: Type check using mypy
+        # mypy needs minutes on the pyochain stubs for most hash seeds and seconds for this one
+        env:
+          PYTHONHASHSEED: "5"
+        run: uv run mypy .
+
+      - name: Type check using pyrefly
+        run: uv run pyrefly check
+        continue-on-error: true

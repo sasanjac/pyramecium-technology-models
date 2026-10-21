@@ -1,0 +1,33 @@
+---
+name: Commit messages
+
+# Pull requests land with a merge commit, so every commit reaches main with its
+# own subject, which commitizen parses for the changelog and the version.
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: commit-messages-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  commit-messages:
+    name: Commit messages
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          # both ends of the range have to be present locally
+          fetch-depth: 0
+
+      - name: Check commit messages are conventional
+        uses: ./.github/actions/check-conventional-commits
+        with:
+          range: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
