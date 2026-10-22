@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
@@ -11,7 +11,9 @@ import pvlib
 from pstm.base import Tech
 
 if t.TYPE_CHECKING:
+    import numpy.typing as npt
     import pandas as pd
+    from pyochain import Result
 
 GAMMA_TEMP = -0.004
 E0 = 1000
@@ -65,11 +67,19 @@ class PV(Tech):
     def run(
         self,
         weather: pd.DataFrame,
-    ) -> None:
+    ) -> Result[None, ValueError]:
+        """Generation profile for ``weather``.
+
+        Returns:
+            ``Err`` if the profile cannot be moved onto :attr:`dates`.
+        """
         self.mc.complete_irradiance(weather)
         self.mc.run_model(self.mc.results.weather)
         index = t.cast("pd.DatetimeIndex", weather.index)
-        acp = self._resample_as_array(target=-self.mc.results.ac, index=index)
+        ac = t.cast("pd.Series", self.mc.results.ac)
+        return self._resample_as_array(target=-ac, index=index).map(self._set_power)
+
+    def _set_power(self, acp: npt.NDArray[np.float64]) -> None:
         self.acp.loc[:, ("low", "L1")] = acp
         self.acp.loc[:, ("base", "L1")] = acp
         acq = acp * np.tan(np.arccos(self.cosphi))

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
@@ -6,19 +6,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import attrs
-import numpy as np
-import numpy.typing as npt
 from loguru import logger
-from numpy.core.numeric import ones
+import numpy as np
+from numpy import ones
 
 from pstm.dickert.appliances import Appliances
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
-from pstm.dickert.appliances import validate_level
-from pstm.dickert.appliances import validate_pm_level
+from pstm.dickert.appliances import Validators
 
 if TYPE_CHECKING:
     import datetime as dt
+
+    import numpy.typing as npt
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -28,7 +28,7 @@ class OperationProfiles(Appliances):
     operation_parameter_1: float
     operation_parameter_2: float
     operation_parameter_3: float
-    operation_variation: float = attrs.field(validator=validate_level)
+    operation_variation: float = attrs.field(validator=Validators.level)
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
@@ -37,7 +37,7 @@ class CycleProfiles(OperationProfiles):
     period_parameter_1: float
     period_parameter_2: float
     period_parameter_3: float
-    period_variation: float = attrs.field(validator=validate_pm_level)
+    period_variation: float = attrs.field(validator=Validators.pm_level)
 
     def _run(
         self,
@@ -45,11 +45,11 @@ class CycleProfiles(OperationProfiles):
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,  # noqa: ARG002
-        lon: float,  # noqa: ARG002
-        altitude: float,  # noqa: ARG002
-        year: int,  # noqa: ARG002
-        tz: dt.tzinfo,  # noqa: ARG002
+        lat: float,  # ruff: ignore[unused-method-argument]
+        lon: float,  # ruff: ignore[unused-method-argument]
+        altitude: float,  # ruff: ignore[unused-method-argument]
+        year: int,  # ruff: ignore[unused-method-argument]
+        tz: dt.tzinfo,  # ruff: ignore[unused-method-argument]
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         p_base = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,
@@ -70,7 +70,7 @@ class CycleProfiles(OperationProfiles):
             generator=generator,
         )
         shift = self._sim_distribution_round(
-            distribution_type="unif",
+            distribution_type=DistributionType.UNIF,
             parameter_1=0,
             parameter_2=float(np.max(period_length[0, :])),
             n_steps=1,
@@ -184,10 +184,13 @@ class CycleProfiles(OperationProfiles):
 
             if self.operation_variation != 0:
                 shift = self.operation_variation * scatter_init[0, unit]
-                step = shift * np.sin(
-                    2 * np.pi * (steps[:, np.newaxis] / step_max + 3 / 4 - 28 / Constants.DAYS_PER_YEAR),
-                )
-                period_length[steps, unit] += step
+                step = (
+                    shift
+                    * np.sin(
+                        2 * np.pi * (steps / step_max + 3 / 4 - 28 / Constants.DAYS_PER_YEAR),
+                    )
+                ).astype(np.int64)
+                operation_length[steps, unit] += step
 
         operation_length[operation_length <= 0] = 1
         return operation_length

@@ -1,21 +1,35 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2018-2025 Guntram Preßmair
 
 from __future__ import annotations
 
 import datetime as dt
+import enum
 import typing as t
 
 import attrs
 import numpy as np
 import pandas as pd
+from pyochain import option
 
 from pstm.base import Tech
-from pstm.utils import dates
+from pstm.utils.dates import Dates
+
+
+class TypeDay(enum.StrEnum):
+    WD = "WD"
+    WE = "WE"
+
+
+class DrivingCategory(enum.StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
 
 if t.TYPE_CHECKING:
-    TypeDay = t.Literal["WD", "WE"]
-    DrivingCategory = t.Literal["low", "medium", "high"]
+    from pyochain import Result
+
     Profile = t.Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     NTrips = t.Literal[0, 1, 2, 3]
 
@@ -45,28 +59,28 @@ N_TRIPS_PROBS: dict[
     TypeDay,
     dict[DrivingCategory, tuple[float, float, float, float]],
 ] = {  # G. Preßmair, “Modellierung und Simulation von Lastprofilen batterieelektrischer Fahrzeuge zur Auslegung von Ladestationen in Wohnhausanlagen,” Mar. 2020.
-    "WD": {
-        "low": (0.500, 0.395, 0.097, 0.008),
-        "medium": (0.346, 0.574, 0.064, 0.016),
-        "high": (0.355, 0.549, 0.088, 0.008),
+    TypeDay.WD: {
+        DrivingCategory.LOW: (0.500, 0.395, 0.097, 0.008),
+        DrivingCategory.MEDIUM: (0.346, 0.574, 0.064, 0.016),
+        DrivingCategory.HIGH: (0.355, 0.549, 0.088, 0.008),
     },
-    "WE": {
-        "low": (0.437, 0.501, 0.062, 0.000),
-        "medium": (0.458, 0.480, 0.062, 0.000),
-        "high": (0.334, 0.500, 0.166, 0.000),
+    TypeDay.WE: {
+        DrivingCategory.LOW: (0.437, 0.501, 0.062, 0.000),
+        DrivingCategory.MEDIUM: (0.458, 0.480, 0.062, 0.000),
+        DrivingCategory.HIGH: (0.334, 0.500, 0.166, 0.000),
     },
 }
 CHARGING_TIMES: dict[
     TypeDay,
     dict[NTrips, tuple[float, float]],
 ] = {  # G. Preßmair, “Modellierung und Simulation von Lastprofilen batterieelektrischer Fahrzeuge zur Auslegung von Ladestationen in Wohnhausanlagen,” Mar. 2020.
-    "WD": {
+    TypeDay.WD: {
         0: (0.0, 24.0),
         1: (9.5, 24.0),
         2: (11.0, 24.0),
         3: (13.0, 24.0),
     },
-    "WE": {
+    TypeDay.WE: {
         0: (0.0, 24.0),
         1: (9.0, 23.5),
         2: (12.0, 24.0),
@@ -94,13 +108,13 @@ class Driver:
 
     @property
     def driving_category(self) -> DrivingCategory:
-        if self.daily_mean_distance * 365 < MED_DISTANCE_THRESH:
-            return "low"
-
-        if self.daily_mean_distance * 365 < HIGH_DISTANCE_THRESH:
-            return "medium"
-
-        return "high"
+        match self.daily_mean_distance * 365:
+            case annual_distance if annual_distance < MED_DISTANCE_THRESH:
+                return DrivingCategory.LOW
+            case annual_distance if annual_distance < HIGH_DISTANCE_THRESH:
+                return DrivingCategory.MEDIUM
+            case _:
+                return DrivingCategory.HIGH
 
     @property
     def daily_distance_wd(self) -> float:
@@ -116,7 +130,7 @@ class Driver:
 
     @classmethod
     def from_random(cls) -> Driver:
-        profile: Profile = GEN.integers(low=1, high=12)  # type: ignore[assignment]
+        profile = t.cast("Profile", int(GEN.integers(low=1, high=13)))  # high is exclusive; profiles are 1..12
         return cls.from_profile(profile=profile)
 
     @classmethod
@@ -163,34 +177,52 @@ class EVSystem(Tech):
     def energy(self, td: TypeDay) -> float:
         if (self.driver.number_of_trips(td) > 0) and self.charged_internally():
             match td:
-                case "WD":
+                case TypeDay.WD:
                     distance = self.driver.daily_distance_wd
-                case "WE":
+                case TypeDay.WE:
                     distance = self.driver.daily_distance_we
+                case _:
+                    t.assert_never(td)
 
             return distance * self.car.mileage / 100 * (1 + self.car.losses)
 
         return 0
 
     def power(self, td: TypeDay) -> np.ndarray:
-        rv = np.zeros(24 * 4)
+        n_slots = 24 * 4
+        rv = np.zeros(n_slots)
         energy = self.energy(td)
-        csp = 24 * 4 + 1
-        while csp > 24 * 4:
+        csp = n_slots
+        while csp >= n_slots:
             csp = int(self.charging_start_point(td) * 4 // 1)
 
         n_full = int((energy * 4) // self.car.charging_power)
         last_power = ((energy * 4) / self.car.charging_power - n_full) * self.car.charging_power
-        rv[csp : csp + n_full] = self.car.charging_power
-        rv[csp + n_full] = last_power
+        rv[csp : min(csp + n_full, n_slots)] = self.car.charging_power
+        if csp + n_full < n_slots:  # the partial slot may overflow the day; clip it
+            rv[csp + n_full] = last_power
+
         return rv
 
-    def run(self) -> None:
-        index = dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
+    def run(self) -> Result[None, ValueError]:
+        """Charging profile of one year on :attr:`dates`.
+
+        Returns:
+            ``Err`` if :attr:`dates` has no frequency.
+        """
+        index = Dates.date_range(self.tz, freq=dt.timedelta(minutes=15), year=self.dates.year[0])
         type_day_start = int(self.dates.weekday[0])
-        tds: list[TypeDay] = ["WD" if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else "WE" for i in range(365)]
+        n_days = len(index) // (24 * 4)  # 365 or 366 (leap year); avoid index-length mismatch
+        tds = [TypeDay.WD if (i + type_day_start) % DAYS_PER_WEEK < WD_THRESH else TypeDay.WE for i in range(n_days)]
         acp = pd.Series(np.concatenate([self.power(td) for td in tds]), index=index, name="p_el")
-        self.acp.loc[:, "high"] = acp.resample(self.dates.freq).mean()
+        return (
+            option(self.dates.freq)
+            .ok_or(ValueError("The frequency of the index is not defined."))
+            .map(lambda freq: self._set_power(acp.resample(freq).mean()))
+        )
+
+    def _set_power(self, acp: pd.Series) -> None:
+        self.acp.loc[:, "high"] = acp
 
 
 CARS = {  # G. Preßmair, “Modellierung und Simulation von Lastprofilen batterieelektrischer Fahrzeuge zur Auslegung von Ladestationen in Wohnhausanlagen,” Mar. 2020.

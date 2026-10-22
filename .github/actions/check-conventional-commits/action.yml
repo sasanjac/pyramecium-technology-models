@@ -1,0 +1,43 @@
+name: Check conventional commits
+description: Fail if a commit in a revision range has a subject that is not a conventional commit
+
+inputs:
+  range:
+    required: true
+    description: Git revision range to validate, e.g. `main..HEAD`. Both ends must be fetched.
+  types:
+    required: false
+    default: feat,fix,docs,style,refactor,perf,test,chore,bug,build,ci,bump
+    description: Comma-separated allowed commit types. `bump` is the type of the commitizen release commit.
+
+runs:
+  using: composite
+  steps:
+    - name: Validate commit subjects
+      shell: bash
+      env:
+        RANGE: ${{ inputs.range }}
+        TYPES: ${{ inputs.types }}
+      run: |
+        set -euo pipefail
+
+        pattern="^(${TYPES//,/|})(\([^)]+\))?!?: .+"
+        # subjects that git and GitHub generate; commitizen skips merge commits
+        exempt='^(Merge |Revert |Reapply )'
+
+        violations=0
+        while IFS=$'\t' read -r sha subject; do
+          if [[ "$subject" =~ $exempt ]]; then
+            continue
+          fi
+          if [[ ! "$subject" =~ $pattern ]]; then
+            echo "::error::${sha} is not a conventional commit: ${subject}"
+            violations=$((violations + 1))
+          fi
+        done < <(git log --format='%h%x09%s' "$RANGE")
+
+        if [[ "$violations" -gt 0 ]]; then
+          echo "${violations} commit(s) in ${RANGE} are not conventional."
+          exit 1
+        fi
+        echo "All commits in ${RANGE} are conventional."

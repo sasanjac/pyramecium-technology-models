@@ -1,20 +1,22 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
 import datetime as dt
+from typing import TYPE_CHECKING
 
 import attrs
-import numpy as np
-import numpy.typing as npt
 from loguru import logger
+import numpy as np
 
 from pstm.dickert.appliances import Constants
 from pstm.dickert.appliances import DistributionType
-from pstm.dickert.appliances import validate_level
-from pstm.dickert.appliances import validate_level_sequence
+from pstm.dickert.appliances import Validators
 from pstm.dickert.cycle_profiles import OperationProfiles
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 MAX_PARAMETER_SUM = 3
 MAX_ITERATIONS = 2**16
@@ -28,7 +30,7 @@ class OnOffProfiles(OperationProfiles):
     usage_parameter_1: float
     usage_parameter_2: float
     usage_parameter_3: float
-    usage_variation: float = attrs.field(validator=validate_level)
+    usage_variation: float = attrs.field(validator=Validators.level)
     time_on_distribution_types: tuple[
         DistributionType,
         DistributionType,
@@ -54,12 +56,12 @@ class OnOffProfiles(OperationProfiles):
         dt.time,
     ]
     time_on_parameters_3: tuple[float, float, float, float, float, float] = attrs.field(
-        validator=validate_level_sequence,
+        validator=Validators.level_sequence,
     )
-    probability_1: float = attrs.field(validator=validate_level)
-    probability_2: float = attrs.field(validator=validate_level)
-    probability_3: float = attrs.field(validator=validate_level)
-    probability_4: float = attrs.field(validator=validate_level)
+    probability_1: float = attrs.field(validator=Validators.level)
+    probability_2: float = attrs.field(validator=Validators.level)
+    probability_3: float = attrs.field(validator=Validators.level)
+    probability_4: float = attrs.field(validator=Validators.level)
     use_probability: bool = attrs.field(init=False, repr=False)
 
     @use_probability.default
@@ -85,11 +87,11 @@ class OnOffProfiles(OperationProfiles):
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,  # noqa: ARG002
-        lon: float,  # noqa: ARG002
-        altitude: float,  # noqa: ARG002
-        year: int,  # noqa: ARG002
-        tz: dt.tzinfo,  # noqa: ARG002
+        lat: float,  # ruff: ignore[unused-method-argument]
+        lon: float,  # ruff: ignore[unused-method-argument]
+        altitude: float,  # ruff: ignore[unused-method-argument]
+        year: int,  # ruff: ignore[unused-method-argument]
+        tz: dt.tzinfo,  # ruff: ignore[unused-method-argument]
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         p_base = self._sim_p_distribution(
             distribution_type=self.active_power_distribution_type,
@@ -299,7 +301,7 @@ class OnOffProfiles(OperationProfiles):
                 )
 
             prob2 = self._sim_distribution(
-                distribution_type="unif",
+                distribution_type=DistributionType.UNIF,
                 parameter_1=0.5,
                 parameter_2=0.5,
                 n_steps=n_days,
@@ -330,38 +332,39 @@ class OnOffProfiles(OperationProfiles):
         clear: bool = True,
         generator: np.random.Generator,
     ) -> npt.NDArray[np.float64]:
-        if distribution_type == "unif" and self.use_probability:
-            p = np.zeros((n_steps, n_units), dtype=np.float64)
-            prob = self._sim_distribution(
-                distribution_type=distribution_type,
-                parameter_1=0.5,
-                parameter_2=0.5,
-                n_units=n_units,
-                clear=False,
-                generator=generator,
-            )
-            n = np.cumsum(
-                [
-                    self.probability_1,
-                    self.probability_2,
-                    self.probability_3,
-                    self.probability_4,
-                ],
-            )
-            p[:, prob < n[0]] = self.active_power_parameter_1
-            p[:, (prob >= n[0]) & (prob < n[1])] = self.active_power_parameter_2
-            p[:, (prob >= n[1]) & (prob < n[2])] = self.active_power_parameter_3
-            p[:, (prob >= n[2]) & (prob < n[3])] = self.active_power_parameter_4
+        match distribution_type:
+            case DistributionType.UNIF if self.use_probability:
+                p = np.zeros((n_steps, n_units), dtype=np.float64)
+                prob = self._sim_distribution(
+                    distribution_type=distribution_type,
+                    parameter_1=0.5,
+                    parameter_2=0.5,
+                    n_units=n_units,
+                    clear=False,
+                    generator=generator,
+                )
+                n = np.cumsum(
+                    [
+                        self.probability_1,
+                        self.probability_2,
+                        self.probability_3,
+                        self.probability_4,
+                    ],
+                )
+                p[:, prob < n[0]] = self.active_power_parameter_1
+                p[:, (prob >= n[0]) & (prob < n[1])] = self.active_power_parameter_2
+                p[:, (prob >= n[1]) & (prob < n[2])] = self.active_power_parameter_3
+                p[:, (prob >= n[2]) & (prob < n[3])] = self.active_power_parameter_4
 
-            return p
-
-        return self._sim_distribution(
-            distribution_type=distribution_type,
-            parameter_1=parameter_1,
-            parameter_2=parameter_2,
-            n_units=n_units,
-            n_steps=n_steps,
-            factor=factor,
-            clear=clear,
-            generator=generator,
-        )
+                return p
+            case _:
+                return self._sim_distribution(
+                    distribution_type=distribution_type,
+                    parameter_1=parameter_1,
+                    parameter_2=parameter_2,
+                    n_units=n_units,
+                    n_steps=n_steps,
+                    factor=factor,
+                    clear=clear,
+                    generator=generator,
+                )

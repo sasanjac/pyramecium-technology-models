@@ -1,0 +1,113 @@
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
+
+from __future__ import annotations
+
+import datetime as dt
+import pathlib
+import zoneinfo as zi
+
+import click
+from loguru import logger
+from pyochain import Err
+from pyochain import Ok
+from pyochain import Some
+
+from pstm.utils.dates import Dates
+from pstm.utils.geo import DwdTryScenario
+from pstm.utils.geo import GeoRef
+from pstm.utils.weather import WeatherGenerator
+
+# Example input file name: TRY2045_37205002705500_Jahr.dat
+# Example input file name: dwd_try_{year}_{scenario}_{index}_epsg3034.feather
+
+
+class DwdTryFiles:
+    @staticmethod
+    @click.command()
+    @click.option(
+        "--input-path",
+        type=click.Path(exists=True, path_type=pathlib.Path),
+        help="Path to the input files directory.",
+    )
+    @click.option(
+        "--output-path",
+        type=click.Path(exists=False, path_type=pathlib.Path),
+        help="Path to the output files directory.",
+    )
+    @click.option(
+        "--year",
+        type=click.INT,
+        help="DWD TRY year.",
+    )
+    @click.option(
+        "--scenario",
+        type=click.Choice([scenario.value for scenario in DwdTryScenario]),
+        callback=lambda _ctx, _param, value: DwdTryScenario(value),
+        help="DWD TRY scenario.",
+    )
+    @click.option(
+        "--skiprows",
+        type=click.INT,
+        help="Rows to skip (2015: 32, 2045: 34).",
+    )
+    @click.option("--delete", is_flag=True, default=False, help="Whether to delete the source file.")
+    def convert(
+        *,
+        input_path: pathlib.Path,
+        output_path: pathlib.Path,
+        year: int,
+        scenario: DwdTryScenario,
+        skiprows: int,
+        delete: bool = False,
+    ) -> None:
+        dwd_files = [file for file in input_path.iterdir() if file.suffix == ".dat"]
+        n_files = len(dwd_files)
+        output_path.mkdir(exist_ok=True, parents=True)
+        tz = zi.ZoneInfo("Europe/Berlin")
+        date_index = Dates.date_range(tz, freq=dt.timedelta(hours=1), year=year)
+        file_name_template = f"dwd_try_{year}_{scenario}_{{:06d}}_epsg3034.feather"
+        with GeoRef(
+            weather_gen_files_path=output_path,
+            dwd_try_year=year,
+            dwd_try_scenario=scenario,
+            reference_epsg=3034,
+        ) as georef:
+            for i, file_path in enumerate(dwd_files):
+                if file_path.suffix == ".dat":
+                    logger.debug("Converting ({i}/{n_files}): {name}...", i=i, n_files=n_files, name=file_path.stem)
+                    coord = file_path.stem.split("_")[1]
+                    lat = int(coord[len(coord) // 2 :])
+                    lon = int(coord[: len(coord) // 2])
+                    match georef.get_weather_gen_index(lat=lat, lon=lon):
+                        case Ok(index):
+                            pass
+                        case Err(error):
+                            logger.error("{error}", error=error)
+                            return
+
+                    output_file = output_path / str(year) / scenario / file_name_template.format(index)
+                    if output_file.exists():
+                        continue
+
+                    output_file.parent.mkdir(parents=True, exist_ok=True)
+                    wg = WeatherGenerator.from_dwd(
+                        file_path,
+                        georef=georef,
+                        lat=lat,
+                        lon=lon,
+                        year=year,
+                        tz=Some(tz),
+                        index=Some(date_index),
+                        freq=dt.timedelta(hours=1),
+                        skiprows=skiprows,
+                    )
+
+                    wg.to_feather(output_file)
+                    if delete:
+                        logger.debug("Deleting {file_path}...", file_path=file_path)
+                        file_path.unlink()
+                        logger.debug("Deleting {file_path}. Done.", file_path=file_path)
+
+
+if __name__ == "__main__":
+    DwdTryFiles.convert()

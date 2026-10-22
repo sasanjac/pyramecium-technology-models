@@ -1,13 +1,23 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
+import math
 from typing import TYPE_CHECKING
 
-import open_mastr
 import pandas as pd
+from pyochain import Iter
+from pyochain import Null
+from pyochain import Some
+
+from pstm.utils.exceptions import MissingExtraError
+
+try:
+    import open_mastr
+except ModuleNotFoundError as e:
+    extra = "mastr"
+    raise MissingExtraError(extra) from e
 
 if TYPE_CHECKING:
     from pstm.utils.geo import GeoRef
@@ -48,10 +58,15 @@ class MaStR:
 
     def installed_wind_farms(self, lat: float, lon: float, power_installed: float) -> list[WindFarm]:
         voronois = self.georef.get_voronois(lat=lat, lon=lon)
-        for voronoi in voronois:
-            installed_units = self.units_wind[self.units_wind["voronoi"] == voronoi]
-            if not installed_units.empty:
-                break
+        match (
+            Iter[int](voronois)
+            .map(lambda voronoi: self.units_wind[self.units_wind["voronoi"] == voronoi])
+            .find(lambda units: not units.empty)
+        ):
+            case Some(installed_units):
+                pass
+            case Null():
+                return []
 
         power_installed_current = installed_units.Nettonennleistung.sum() * 1e3  # kW in W
         unit_factor = math.ceil(power_installed * 1e6 / power_installed_current)

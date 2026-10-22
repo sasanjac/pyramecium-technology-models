@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING
 
 import attrs
 import numpy as np
-import numpy.typing as npt
 
 from pstm.dickert.appliances import DistributionType
 from pstm.dickert.on_off_profiles import OnOffProfiles
 
 if TYPE_CHECKING:
     import datetime as dt
+
+    import numpy.typing as npt
 
 
 MAX_ITERATIONS = 2**16
@@ -31,17 +32,17 @@ class ProcessProfiles(OnOffProfiles):
     operation_2_parameter_1: float
     operation_2_parameter_2: float
 
-    def _run(
+    def _run(  # ruff: ignore[too-many-locals] - two operating phases with their own parameters
         self,
         *,
         n_units: int,
         n_steps: int,
         generator: np.random.Generator,
-        lat: float,  # noqa: ARG002
-        lon: float,  # noqa: ARG002
-        altitude: float,  # noqa: ARG002
-        year: int,  # noqa: ARG002
-        tz: dt.tzinfo,  # noqa: ARG002
+        lat: float,  # ruff: ignore[unused-method-argument]
+        lon: float,  # ruff: ignore[unused-method-argument]
+        altitude: float,  # ruff: ignore[unused-method-argument]
+        year: int,  # ruff: ignore[unused-method-argument]
+        tz: dt.tzinfo,  # ruff: ignore[unused-method-argument]
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         p1_base = self._sim_distribution(
             distribution_type=self.active_power_distribution_type,

@@ -1,22 +1,33 @@
-# Copyright (c) 2018-2025 Sasan Jacob Rasti
+# Copyright (c) 2018-2026 Sasan Jacob Rasti
 # Copyright (c) 2015-2025 Jörg Dickert
 
 from __future__ import annotations
 
 import abc
+import enum
 import typing as t
 
 import attrs
 import numpy as np
+from pyochain import Err
+from pyochain import Ok
+
+from pstm.utils.results import Constructible
 
 if t.TYPE_CHECKING:
-    import datetime as dt
     from collections.abc import Sequence
+    import datetime as dt
 
     import numpy.typing as npt
+    from pyochain import Result
 
 
-DistributionType = t.Literal["normal", "unif", "lognormal"]
+class DistributionType(enum.StrEnum):
+    NORMAL = "normal"
+    UNIF = "unif"
+    LOGNORMAL = "lognormal"
+
+
 Phase = t.Literal[0, 1, 2, 3]
 
 
@@ -32,46 +43,50 @@ class Constants:
     WEEKENDDAYS_PER_YEAR: int = 104
 
 
-def validate_pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG001
-    if not -1 <= value <= 1:
-        msg = f"Attribute {attribute.name} has to be between -1 and 1, is {value}"
-        raise ValueError(msg)
+class Validators:
+    """attrs validators of the appliance levels; attrs reports an invalid field only by raising."""
 
-    return value
+    @staticmethod
+    def pm_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # ruff: ignore[unused-static-method-argument]
+        if not -1 <= value <= 1:
+            msg = f"Attribute {attribute.name} has to be between -1 and 1, is {value}"
+            raise ValueError(msg)
 
+        return value
 
-def validate_level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # noqa: ARG001
-    if not 0 <= value <= 1:
-        msg = f"Attribute {attribute.name} has to be between 0 and 1, is {value}"
-        raise ValueError(msg)
+    @staticmethod
+    def level(instance: Appliances, attribute: attrs.Attribute, value: float) -> float:  # ruff: ignore[unused-static-method-argument]
+        if not 0 <= value <= 1:
+            msg = f"Attribute {attribute.name} has to be between 0 and 1, is {value}"
+            raise ValueError(msg)
 
-    return value
+        return value
 
-
-def validate_level_sequence(
-    instance: Appliances,
-    attribute: attrs.Attribute,
-    value: Sequence[float],
-) -> Sequence[float]:
-    return tuple(validate_level(instance, attribute, level) for level in value)
+    @staticmethod
+    def level_sequence(
+        instance: Appliances,
+        attribute: attrs.Attribute,
+        value: Sequence[float],
+    ) -> Sequence[float]:
+        return tuple(Validators.level(instance, attribute, level) for level in value)
 
 
 @attrs.define(auto_attribs=True, kw_only=True, slots=False)
-class Appliances:
+class Appliances(Constructible):
     description: str
     phase: Phase
     switch_on_current: float
     switch_on_time: int
-    equipment_level: float = attrs.field(validator=validate_level)
+    equipment_level: float = attrs.field(validator=Validators.level)
     active_power_distribution_type: DistributionType
     active_power_parameter_1: float
     active_power_parameter_2: float
     active_power_parameter_3: float
-    reactive_power_share: float = attrs.field(validator=validate_level)
+    reactive_power_share: float = attrs.field(validator=Validators.level)
     reactive_power_distribution_type: DistributionType
-    reactive_power_parameter_1: float = attrs.field(validator=validate_level)
-    reactive_power_parameter_2: float = attrs.field(validator=validate_level)
-    reactive_power_parameter_3: float = attrs.field(validator=validate_level)
+    reactive_power_parameter_1: float = attrs.field(validator=Validators.level)
+    reactive_power_parameter_2: float = attrs.field(validator=Validators.level)
+    reactive_power_parameter_3: float = attrs.field(validator=Validators.level)
 
     @staticmethod
     def _sim_distribution(
@@ -86,19 +101,19 @@ class Appliances:
         clear: bool = True,
     ) -> npt.NDArray[np.float64]:
         match distribution_type:
-            case "normal":
+            case DistributionType.NORMAL:
                 p = generator.normal(
                     loc=parameter_1,
                     scale=parameter_2,
                     size=(n_steps, n_units),
                 )
-            case "unif":
+            case DistributionType.UNIF:
                 p = generator.uniform(
                     low=parameter_1 - parameter_2,
                     high=parameter_1 + parameter_2,
                     size=(n_steps, n_units),
                 )
-            case "lognormal":
+            case DistributionType.LOGNORMAL:
                 p = (
                     generator.lognormal(
                         mean=parameter_1,
@@ -108,7 +123,7 @@ class Appliances:
                     * factor
                 )
             case _:
-                p = np.zeros((n_steps, n_units))
+                t.assert_never(distribution_type)
 
         if clear:
             p[p < 0] = 0
@@ -152,7 +167,7 @@ class Appliances:
         time_on: npt.NDArray[np.int64],
         time_off: npt.NDArray[np.int64],
     ) -> npt.NDArray[np.float64]:
-        n_rows = np.max([np.max([time_on, time_off]) + 1, n_steps])
+        n_rows = max(int(np.max([time_on, time_off])) + 1, n_steps)
         p = np.zeros((n_rows, n_units))
         for i in range(n_units):
             p[time_off[time_off[:, i] > 0, i], i] = -1
@@ -175,7 +190,12 @@ class Appliances:
         altitude: float,
         year: int,
         tz: dt.tzinfo,
-    ) -> None:
+    ) -> Result[None, ValueError]:
+        """Active and reactive power of ``n_units`` units on the phase of the appliance.
+
+        Returns:
+            ``Err`` if the simulated active power is negative.
+        """
         p, q = self._run(
             n_units=n_units,
             n_steps=n_steps,
@@ -187,8 +207,7 @@ class Appliances:
             generator=generator,
         )
         if np.any(p < 0):
-            msg = "active power can not be negative."
-            raise ValueError(msg)
+            return Err(ValueError("active power can not be negative."))
 
         if self.phase == 0:
             self.phase = generator.choice((1, 2, 3), p=phase_distribution)
@@ -197,6 +216,7 @@ class Appliances:
         self.p[:, :, self.phase - 1] = p
         self.q = np.zeros((n_steps, n_units, 3))
         self.q[:, :, self.phase - 1] = q
+        return Ok(None)
 
     @abc.abstractmethod
     def _run(
@@ -213,14 +233,15 @@ class Appliances:
     ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Internal power calculation method.
 
-        Arguments:
-            n_units {int} -- amount of units
-            n_steps {int} -- amount of time steps
-            lat {float} -- latitude of household location
-            lon {float} -- longitude of household location
-            altitude {float} -- altitude of household location
-            year {int} -- year of power profile
-            tz {dt.tzinfo} -- timezone of household location
+        Args:
+            n_units: Amount of units.
+            n_steps: Amount of time steps.
+            generator: Random number generator.
+            lat: Latitude of the household location.
+            lon: Longitude of the household location.
+            altitude: Altitude of the household location.
+            year: Year of the power profile.
+            tz: Time zone of the household location.
 
         Returns:
             tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]] -- active and reactive power

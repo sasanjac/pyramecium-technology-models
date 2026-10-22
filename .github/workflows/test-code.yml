@@ -1,56 +1,47 @@
 ---
-  name: Test code
+name: Test code
 
-  on:
-    push:
-      branches:
-        - main
+# Both jobs run on pull_request for every author, dependabot included: they
+# need no secret, so the read-only token of dependabot runs suffices.
 
-    pull_request:
-      branches:
-        - main
+on:
+  push:
+    branches:
+      - main
 
-    pull_request_target:
-      branches:
-        - main
+  pull_request:
+    branches:
+      - main
 
-    workflow_call:
+  workflow_call:
 
+concurrency:
+  # A new push cancels the runs of the superseded commit.
+  group: test-code-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
-  jobs:
-    check-code:
-      name: Check code
-      uses: ./.github/workflows/check-code.yml
-      if: |
-            (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]') ||
-            (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]')
+jobs:
+  check-code:
+    name: Check code
+    uses: ./.github/workflows/check-code.yml
 
-    test-code:
-      name: Test code
-      runs-on: ubuntu-24.04
-      needs: [check-code]
-      if: |
-            (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]') ||
-            (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]')
+  test-code:
+    name: Test code
+    runs-on: ubuntu-24.04
+    # No needs on check-code: a skipped job reports no failure, so the required
+    # check "Test code" would pass whenever check-code fails.
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
 
-      steps:
-        - name: Check out repository
-          if: ${{ github.event_name != 'pull_request_target' }}
-          uses: actions/checkout@v6.0.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
 
-        - name: Check out repository
-          if: ${{ github.event_name == 'pull_request_target' }}
-          uses: actions/checkout@v6.0.1
-          with:
-            ref: ${{ github.event.pull_request.head.sha }}
+      - name: Install the project
+        # Core install without extras, so the suite fails if a test module needs one.
+        run: uv sync --frozen
 
-        - name: Install uv
-          uses: astral-sh/setup-uv@v7.1.6
-          with:
-            enable-cache: true
-
-        - name: Install the project
-          run: uv sync --dev
-
-        - name: Unit test using pytest
-          run: uv run pytest
+      - name: Unit test using pytest
+        run: uv run pytest --cov --cov-report=term-missing --cov-report=xml
